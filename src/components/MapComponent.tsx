@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -84,16 +84,21 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
   const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null);
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
 
-  // Filtrar spots visíveis na viewport do mapa
-  const visibleSpots = spots.filter(spot => {
-    if (!mapBounds) return true;
-    return mapBounds.contains([spot.lat, spot.lng]);
-  });
+  // Filtrar spots visíveis na viewport do mapa (memorizado)
+  const visibleSpots = useMemo(() => {
+    return spots.filter(spot => {
+      if (!mapBounds) return true;
+      return mapBounds.contains([spot.lat, spot.lng]);
+    });
+  }, [spots, mapBounds]);
 
-  // Se houver spot selecionado por clique, mostramos apenas ele. Senão, os visíveis.
-  const spotsForFeed = selectedSpotId 
-    ? spots.filter(s => s.id === selectedSpotId)
-    : visibleSpots;
+  // Se houver spot selecionado por clique, mostramos apenas ele. Senão, os visíveis. (memorizado)
+  const spotsForFeed = useMemo(() => {
+    if (selectedSpotId) {
+      return spots.filter(s => s.id === selectedSpotId);
+    }
+    return visibleSpots;
+  }, [spots, selectedSpotId, visibleSpots]);
 
   // Rastrear orientação do dispositivo (Bússola) para a seta 3D
   useEffect(() => {

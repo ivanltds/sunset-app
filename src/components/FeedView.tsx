@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Star, Plus, Camera, X, Loader2 } from "lucide-react";
@@ -51,30 +51,58 @@ export default function FeedView({
   const [userId, setUserId] = useState<string | null>(null);
   const [activePhotoUrl, setActivePhotoUrl] = useState<string | null>(null);
   const [zoomScale, setZoomScale] = useState(1);
+  const [prevSpotIds, setPrevSpotIds] = useState<string>("");
 
-  useEffect(() => {
-    fetchPhotos();
-  }, [spots]);
+  const fetchIdRef = useRef(0);
 
   const fetchPhotos = async () => {
+    // 1. Incrementar ID da chamada ativa
+    fetchIdRef.current += 1;
+    const currentFetchId = fetchIdRef.current;
+
+    // 2. Verificar se a lista de spots está vazia
     if (!spots.length) {
       setPhotos([]);
       setLoading(false);
       return;
     }
 
+    // 3. Criar string de comparação de IDs para evitar requisições de rede redundantes
+    const currentIds = spots.map(s => s.id).sort().join(",");
+    if (currentIds === prevSpotIds) {
+      // Se os IDs não mudaram, apenas recalculamos a ordenação se a localização do usuário mudou
+      if (userPos && photos.length > 0) {
+        const updated = photos.map(photo => {
+          const lat = photo.spots?.lat ?? 0;
+          const lng = photo.spots?.lng ?? 0;
+          const distance = getDistance(userPos[0], userPos[1], lat, lng);
+          return { ...photo, distance };
+        }).sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
+        
+        setPhotos(updated);
+      }
+      return;
+    }
+
+    setPrevSpotIds(currentIds);
+    setLoading(true);
+
     const spotIds = spots.map(s => s.id);
 
     const { data: { session } } = await supabase.auth.getSession();
+    if (currentFetchId !== fetchIdRef.current) return; // Aborta se outra chamada iniciou
+
     const uid = session?.user?.id || null;
     setUserId(uid);
 
-    // Buscar fotos
+    // Buscar fotos no Supabase
     const { data: photosData, error: photosError } = await supabase
       .from("spot_photos")
       .select("*, spots(title, lat, lng)")
       .in("spot_id", spotIds)
       .order("created_at", { ascending: false });
+
+    if (currentFetchId !== fetchIdRef.current) return; // Aborta se obsoleta
 
     if (photosData) {
       let processedPhotos = [...photosData];
@@ -101,6 +129,8 @@ export default function FeedView({
           supabase.from("spot_bookmarks").select("spot_id").eq("user_id", uid).in("spot_id", spotIds)
         ]);
         
+        if (currentFetchId !== fetchIdRef.current) return; // Aborta se obsoleta
+
         const likesMap: Record<string, boolean> = {};
         const bookMap: Record<string, boolean> = {};
         
@@ -115,6 +145,10 @@ export default function FeedView({
     
     setLoading(false);
   };
+
+  useEffect(() => {
+    fetchPhotos();
+  }, [spots, userPos]);
 
   const toggleLike = async (spotId: string) => {
     if (!userId) return;
