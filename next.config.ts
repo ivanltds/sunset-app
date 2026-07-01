@@ -22,12 +22,16 @@ const nextConfig: NextConfig = {
     "smooth-ladybug-9.loca.lt"
   ],
   async rewrites() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL.startsWith('http')
+      ? process.env.NEXT_PUBLIC_SUPABASE_URL
+      : 'http://127.0.0.1:54421';
+
     return [
       {
         source: '/supabase-api/:path*',
-        destination: 'http://127.0.0.1:54421/:path*'
+        destination: `${supabaseUrl}/:path*`
       }
-    ]
+    ];
   }
 };
 
