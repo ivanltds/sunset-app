@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -29,12 +29,21 @@ import { LocateFixed, Camera, Compass } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import FeedView from "./FeedView";
 
-// Component to recenter map on user location
+// Component to recenter map on user location (only on mount or manual click trigger)
 function RecenterAutomatically({ lat, lng, trigger }: { lat: number; lng: number; trigger: number }) {
   const map = useMap();
+  
+  // Guardamos as coordenadas mais recentes em ref para não re-disparar o setView no watcher do GPS
+  const coordsRef = useRef({ lat, lng });
   useEffect(() => {
-    map.setView([lat, lng], 14, { animate: true });
-  }, [lat, lng, trigger, map]);
+    coordsRef.current = { lat, lng };
+  }, [lat, lng]);
+
+  useEffect(() => {
+    map.setView([coordsRef.current.lat, coordsRef.current.lng], 14, { animate: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trigger, map]); 
+
   return null;
 }
 
