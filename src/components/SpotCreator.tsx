@@ -1,0 +1,199 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import { supabase } from "@/lib/supabaseClient";
+import { processAndWatermarkImage } from "@/lib/watermark";
+
+// Fix leaflet icon
+const defaultIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+// Componente para o marcador arrastável
+function DraggableMarker({ pos, setPos }: { pos: [number, number], setPos: (pos: [number, number]) => void }) {
+  const markerRef = useRef<L.Marker>(null);
+  const eventHandlers = {
+    dragend() {
+      const marker = markerRef.current;
+      if (marker != null) {
+        const latlng = marker.getLatLng();
+        setPos([latlng.lat, latlng.lng]);
+      }
+    },
+  };
+  return <Marker draggable eventHandlers={eventHandlers} position={pos} ref={markerRef} icon={defaultIcon} />;
+}
+
+interface SpotCreatorProps {
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export default function SpotCreator({ onClose, onSuccess }: SpotCreatorProps) {
+  const [pos, setPos] = useState<[number, number] | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Capturar GPS inicial
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (p) => setPos([p.coords.latitude, p.coords.longitude]),
+        (err) => {
+          console.warn(err);
+          setPos([-23.55052, -46.633308]); // Fallback pra testes
+        },
+        { enableHighAccuracy: true }
+      );
+    } else {
+      setPos([-23.55052, -46.633308]);
+    }
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const selected = e.target.files[0];
+      setFile(selected);
+      setPreview(URL.createObjectURL(selected));
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!file || !title || !pos) {
+      setError("Preencha todos os campos e tire a foto!");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      // 1. Processar e colocar Marca d'Água
+      const watermarkedBlob = await processAndWatermarkImage(file, "Sunset App");
+      const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+
+      // 2. Upload pro Supabase Storage
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from("spots")
+        .upload(filename, watermarkedBlob, { contentType: "image/jpeg" });
+
+      if (storageError) throw storageError;
+
+      // Pegar URL Pública
+      const { data: publicUrlData } = supabase.storage.from("spots").getPublicUrl(filename);
+      const imageUrl = publicUrlData.publicUrl;
+
+      // 3. Pegar a sessão ativa
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Você não está autenticado (sessão fantasma não encontrada).");
+      }
+
+      // 4. Salvar no Banco com o ID real da sessão
+      const { error: dbError } = await supabase.from("spots").insert({
+        title,
+        lat: pos[0],
+        lng: pos[1],
+        user_id: session.user.id,
+        image_url: imageUrl
+      });
+
+      if (dbError) {
+         // Fallback caso a foreign key fale (Para testes se ghost_users não foi configurado).
+         console.warn("Falha no Insert com user_id. Tentando sem user_id estrito ou reportando", dbError);
+         throw dbError;
+      }
+
+      onSuccess();
+    } catch (err: any) {
+      console.error("Storage/DB Error:", err);
+      const msg = err?.message || err?.error_description || (typeof err === "object" ? JSON.stringify(err) : "Erro ao salvar Spot.");
+      setError(`Falha: ${msg}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!pos) {
+    return <div className="absolute inset-0 z-50 bg-white flex items-center justify-center">Obtendo GPS...</div>;
+  }
+
+  return (
+    <div className="absolute inset-0 z-50 bg-black/60 flex flex-col justify-end">
+      <div className="bg-white rounded-t-[40px] p-6 shadow-2xl flex flex-col h-[85vh] overflow-y-auto">
+        
+        {/* Handle */}
+        <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6 shrink-0"></div>
+
+        <h2 className="text-2xl font-bold text-gray-900 text-center mb-1">Mapear este Local</h2>
+        <p className="text-sm text-gray-500 text-center mb-6">Imortalize a vista daqui para a comunidade.</p>
+
+        {error && <div className="bg-red-100 text-red-600 p-3 rounded-lg mb-4 text-sm font-semibold">{error}</div>}
+
+        {/* Input Câmera Nativa */}
+        {!preview ? (
+          <label className="w-full h-48 shrink-0 bg-gray-100 rounded-3xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors mb-6">
+            <span className="text-4xl mb-2">📸</span>
+            <span className="text-gray-700 font-bold">Tirar Foto do Local</span>
+            <span className="text-xs text-gray-400 mt-1">A câmera será aberta</span>
+            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+          </label>
+        ) : (
+          <div className="w-full h-48 shrink-0 rounded-3xl overflow-hidden mb-6 relative border border-gray-200">
+            <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+            <button onClick={() => { setFile(null); setPreview(null); }} className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full text-xs">Trocar</button>
+          </div>
+        )}
+
+        {/* Formulário */}
+        <div className="mb-6 shrink-0">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Dê um nome para este lugar</label>
+          <input 
+            type="text" 
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Ex: Mirante do Sol Poente..." 
+            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 text-gray-800 outline-none focus:ring-2 focus:ring-[#ff5a5f] shadow-inner"
+          />
+        </div>
+
+        {/* Ajuste Fino de GPS */}
+        <div className="mb-6 flex-1 min-h-[200px] rounded-2xl overflow-hidden border border-gray-200 relative shrink-0">
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 px-3 py-1 rounded-full text-xs font-bold shadow-md pointer-events-none">
+            📍 Arraste o pino para ajustar
+          </div>
+          <MapContainer center={pos} zoom={16} style={{ height: "100%", width: "100%" }} zoomControl={false}>
+            <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+            <DraggableMarker pos={pos} setPos={setPos} />
+          </MapContainer>
+        </div>
+
+        {/* Ações */}
+        <div className="flex gap-4 shrink-0 pb-6">
+          <button onClick={onClose} disabled={loading} className="w-1/3 bg-gray-200 text-gray-800 font-bold py-4 rounded-2xl">
+            Cancelar
+          </button>
+          <button 
+            onClick={handleSubmit} 
+            disabled={loading || !file || !title}
+            className="w-2/3 bg-[#ff5a5f] text-white font-bold py-4 rounded-2xl shadow-[0_10px_20px_-5px_rgba(255,90,95,0.4)] disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? <span className="animate-spin">🌀</span> : "Enterrar Spot"}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}

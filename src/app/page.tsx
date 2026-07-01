@@ -11,9 +11,15 @@ const MapEngine = dynamic(() => import("@/components/MapComponent"), {
   loading: () => <div className="flex-1 flex items-center justify-center bg-gray-100">Carregando Mapa...</div>
 });
 
+const SpotCreatorModal = dynamic(() => import("@/components/SpotCreator"), {
+  ssr: false,
+});
+
 export default function Home() {
   const [logs, setLogs] = useState<string[]>([]);
   const [showCompass, setShowCompass] = useState(false);
+  const [showCreator, setShowCreator] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const addLog = (msg: string) => {
     setLogs((prev) => [...prev, msg]);
@@ -75,7 +81,7 @@ export default function Home() {
       {showCompass ? (
         <CompassView onClose={() => setShowCompass(false)} />
       ) : (
-        <MapEngine />
+        <MapEngine key={refreshKey} />
       )}
 
       {/* Bottom Controls Overlay (only visible on map) */}
@@ -89,26 +95,10 @@ export default function Home() {
           </button>
           
           <button 
-            className="flex-1 mx-4 bg-[#ff5a5f] text-white py-3 px-6 rounded-full font-bold text-lg shadow-[0_10px_15px_-3px_rgba(255,90,95,0.4)] pointer-events-auto active:scale-95 transition-transform"
-            onClick={async () => {
-              const { data: { session } } = await supabase.auth.getSession();
-              if (session) {
-                const newSpots = Array.from({ length: 50 }).map((_, i) => ({
-                  user_id: session.user.id,
-                  lat: -23.55052 + (Math.random() - 0.5) * 0.05,
-                  lng: -46.633308 + (Math.random() - 0.5) * 0.05,
-                  title: `Spot Real #${i + 1}`
-                }));
-                const { error } = await supabase.from('spots').insert(newSpots);
-                if (error) {
-                  alert("Erro ao inserir: " + error.message);
-                } else {
-                  alert('50 spots salvos no Supabase! Dê um F5 para ver os clusters carregando do banco de dados.');
-                }
-              }
-            }}
+            className="flex-1 mx-4 bg-[#ff5a5f] text-white py-3 px-6 rounded-full font-bold text-lg shadow-[0_10px_15px_-3px_rgba(255,90,95,0.4)] pointer-events-auto active:scale-95 transition-transform flex items-center justify-center gap-2"
+            onClick={() => setShowCreator(true)}
           >
-            📷 Novo Spot (Gerar Mocks)
+            📷 Novo Spot
           </button>
 
           <button 
@@ -118,6 +108,17 @@ export default function Home() {
             🧭
           </button>
         </div>
+      )}
+
+      {/* Spot Creator Modal */}
+      {showCreator && (
+        <SpotCreatorModal 
+          onClose={() => setShowCreator(false)} 
+          onSuccess={() => {
+            setShowCreator(false);
+            setRefreshKey(k => k + 1); // Força o mapa a recarregar os spots do banco
+          }} 
+        />
       )}
     </main>
   );
