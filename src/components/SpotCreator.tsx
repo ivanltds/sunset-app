@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { Camera, MapPin, Loader2 } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -143,9 +144,9 @@ export default function SpotCreator({ onClose, onSuccess }: SpotCreatorProps) {
 
         {/* Input Câmera Nativa */}
         {!preview ? (
-          <label className="w-full h-48 shrink-0 bg-gray-100 rounded-3xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors mb-6">
-            <span className="text-4xl mb-2">📸</span>
-            <span className="text-gray-700 font-bold">Tirar Foto do Local</span>
+          <label className="w-full h-48 shrink-0 border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center cursor-pointer hover:bg-gray-50 transition-colors flex flex-col items-center justify-center mb-6">
+            <Camera size={40} className="text-gray-400 mb-2" />
+            <span className="text-gray-600 font-semibold">Tirar Foto</span>
             <span className="text-xs text-gray-400 mt-1">A câmera será aberta</span>
             <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
           </label>
@@ -170,26 +171,31 @@ export default function SpotCreator({ onClose, onSuccess }: SpotCreatorProps) {
 
         {/* Ajuste Fino de GPS */}
         <div className="mb-6 flex-1 min-h-[200px] rounded-2xl overflow-hidden border border-gray-200 relative shrink-0">
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 px-3 py-1 rounded-full text-xs font-bold shadow-md pointer-events-none">
-            📍 Arraste o pino para ajustar
+          <div className="flex items-center text-sm font-semibold text-gray-500 mb-2 gap-2">
+            <MapPin size={16} /> Arraste o pino para ajustar
           </div>
-          <MapContainer center={pos} zoom={16} style={{ height: "100%", width: "100%" }} zoomControl={false}>
-            <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-            <DraggableMarker pos={pos} setPos={setPos} />
-          </MapContainer>
+          <div className="w-full h-32 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+            <MapContainer center={pos} zoom={16} style={{ height: "100%", width: "100%" }} zoomControl={false}>
+              <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+              <DraggableMarker pos={pos} setPos={setPos} />
+            </MapContainer>
+          </div>
         </div>
 
         {/* Ações */}
-        <div className="flex gap-4 shrink-0 pb-6">
-          <button onClick={onClose} disabled={loading} className="w-1/3 bg-gray-200 text-gray-800 font-bold py-4 rounded-2xl">
+        <div className="flex gap-4 mt-6 shrink-0">
+          <button 
+            onClick={onClose}
+            className="flex-1 py-4 font-bold text-gray-500 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+          >
             Cancelar
           </button>
           <button 
-            onClick={handleSubmit} 
-            disabled={loading || !file || !title}
-            className="w-2/3 bg-[#ff5a5f] text-white font-bold py-4 rounded-2xl shadow-[0_10px_20px_-5px_rgba(255,90,95,0.4)] disabled:opacity-50 flex items-center justify-center gap-2"
+            onClick={handleSubmit}
+            disabled={!preview || !title.trim() || loading}
+            className="flex-1 py-4 font-bold text-white bg-[#ff5a5f] rounded-xl hover:bg-[#e04a4f] transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_10px_15px_-3px_rgba(255,90,95,0.4)]"
           >
-            {loading ? <span className="animate-spin">🌀</span> : "Enterrar Spot"}
+            {loading ? <Loader2 size={20} className="animate-spin" /> : "Enterrar Spot"}
           </button>
         </div>
 

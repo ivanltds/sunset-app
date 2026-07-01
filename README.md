@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sunset App
 
-## Getting Started
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app) and uses [Supabase](https://supabase.com/) as the backend.
 
-First, run the development server:
+## Pré-requisitos
+
+Certifique-se de ter instalado em sua máquina:
+- [Node.js](https://nodejs.org/) (versão recomendada: LTS)
+- [npm](https://www.npmjs.com/), [yarn](https://yarnpkg.com/) ou [pnpm](https://pnpm.io/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (necessário para rodar o Supabase localmente)
+- [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started)
+
+## Passo a Passo para Rodar Localmente
+
+### 1. Clonar e Instalar Dependências
+
+Instale as dependências do projeto na raiz:
+
+```bash
+npm install
+# ou
+yarn install
+# ou
+pnpm install
+```
+
+### 2. Subir o Supabase Localmente
+
+Com o Docker em execução (ex: Docker Desktop aberto), inicie os serviços locais do Supabase na raiz do projeto:
+
+```bash
+npx supabase start
+```
+*Observação: se você instalou o CLI globalmente, pode usar `supabase start`.*
+
+Após a inicialização, o terminal exibirá as credenciais locais, como a `API URL` e a `anon key`. O painel do Supabase Studio (banco de dados) ficará disponível, geralmente, em [http://localhost:54323](http://localhost:54323).
+
+### 3. Configurar Variáveis de Ambiente
+
+Crie um arquivo `.env.local` na raiz do projeto e adicione as chaves fornecidas no passo anterior:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=sua_api_url_local
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_anon_key_local
+```
+
+### 4. Aplicar Migrations (Opcional/Se houver)
+
+Se já existirem arquivos de migração de banco de dados (`supabase/migrations`), você pode aplicá-los com:
+
+```bash
+npx supabase db push
+```
+
+### 5. Iniciar o Servidor de Desenvolvimento do Next.js
+
+Com o backend rodando e o `.env.local` configurado, inicie o app:
 
 ```bash
 npm run dev
-# or
+# ou
 yarn dev
-# or
+# ou
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse [http://localhost:3000](http://localhost:3000) no seu navegador para ver o resultado! Você pode editar a página modificando o arquivo `app/page.tsx` (ou os componentes no seu projeto) - a interface atualiza automaticamente.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 6. Acessar via Celular (HTTPS com Cloudflare / Localtunnel)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Se você precisa testar funcionalidades que exigem HTTPS no celular (como Geolocalização da Câmera/Mapa), você precisará criar um túnel para expor o seu `localhost` para a internet.
 
-## Learn More
+**Opção 1: Cloudflare Tunnel (Recomendado)**
+1. Baixe o [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) e instale no seu computador.
+2. Em um novo terminal, rode o comando:
+```bash
+cloudflared tunnel --url http://localhost:3000
+```
+3. O terminal irá gerar um link com `https://<nomes-aleatorios>.trycloudflare.com`. Abra este link no seu celular.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Opção 2: Localtunnel (Mais prático via npx)**
+Se não quiser instalar o Cloudflare no Windows, você pode rodar o Localtunnel diretamente pelo Node:
+```bash
+npx localtunnel --port 3000
+```
+Isso vai gerar um link HTTPS (`https://....loca.lt`) que você pode abrir no seu celular para testar.

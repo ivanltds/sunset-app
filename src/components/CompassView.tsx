@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { X } from "lucide-react";
 
 export default function CompassView({ onClose }: { onClose: () => void }) {
   const [heading, setHeading] = useState(0);
@@ -128,12 +129,12 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
         </>
       )}
 
-      {/* Close Button */}
+      {/* Botão Fechar */}
       <button 
+        className="absolute top-6 right-6 w-12 h-12 bg-gray-900 border border-gray-800 text-white rounded-full flex items-center justify-center text-xl shadow-lg active:bg-gray-800 transition-colors"
         onClick={onClose}
-        className="absolute bottom-8 bg-gray-800 text-white w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl border border-gray-700 shadow-lg active:bg-gray-700 transition-colors z-30"
       >
-        ✕
+        <X size={24} />
       </button>
     </div>
   );

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabaseClient";
 import CompassView from "@/components/CompassView";
+import { Settings } from "lucide-react";
 
 // Import Map dynamically to avoid SSR errors with Leaflet
 const MapEngine = dynamic(() => import("@/components/MapComponent"), {
@@ -71,8 +72,8 @@ export default function Home() {
       {!showCompass && (
         <header className="absolute top-0 w-full p-5 flex justify-between items-center z-[1000] bg-gradient-to-b from-white/90 to-transparent pointer-events-none">
           <h1 className="font-extrabold text-2xl text-gray-900 pointer-events-auto">SUN<span className="text-[#ff5a5f]">SET</span></h1>
-          <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md border border-gray-200 text-xl pointer-events-auto active:bg-gray-50">
-            ⚙️
+          <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md border border-gray-200 pointer-events-auto active:bg-gray-50 text-gray-700">
+            <Settings size={20} />
           </button>
         </header>
       )}
@@ -81,33 +82,11 @@ export default function Home() {
       {showCompass ? (
         <CompassView onClose={() => setShowCompass(false)} />
       ) : (
-        <MapEngine key={refreshKey} />
-      )}
-
-      {/* Bottom Controls Overlay (only visible on map) */}
-      {!showCompass && (
-        <div className="absolute bottom-6 w-full px-5 flex justify-between items-center z-[1000] pointer-events-none">
-          <button 
-            className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg border border-gray-200 text-xl pointer-events-auto active:bg-gray-50"
-            onClick={() => alert("Centralizar no GPS (Mock)")}
-          >
-            🎯
-          </button>
-          
-          <button 
-            className="flex-1 mx-4 bg-[#ff5a5f] text-white py-3 px-6 rounded-full font-bold text-lg shadow-[0_10px_15px_-3px_rgba(255,90,95,0.4)] pointer-events-auto active:scale-95 transition-transform flex items-center justify-center gap-2"
-            onClick={() => setShowCreator(true)}
-          >
-            📷 Novo Spot
-          </button>
-
-          <button 
-            className="w-12 h-12 bg-gray-900 text-white rounded-full flex items-center justify-center shadow-lg border border-gray-800 text-xl pointer-events-auto active:bg-gray-800 transition-colors"
-            onClick={() => setShowCompass(true)}
-          >
-            🧭
-          </button>
-        </div>
+        <MapEngine 
+          key={refreshKey} 
+          onOpenCreator={() => setShowCreator(true)}
+          onOpenCompass={() => setShowCompass(true)}
+        />
       )}
 
       {/* Spot Creator Modal */}
