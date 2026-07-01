@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wireframes - Milestone 2: Mapa e Bússola</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f3f4f6; color: #111827; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 40px; }
+    .device { width: 375px; height: 812px; background-color: #ffffff; border-radius: 40px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden; position: relative; border: 8px solid #d1d5db; display: flex; flex-direction: column; }
+    
+    /* View 1: Mapa Interativo */
+    .map-header { position: absolute; top: 0; width: 100%; padding: 20px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; z-index: 10; background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 100%); }
+    .logo-text { font-weight: 800; font-size: 20px; }
+    .logo-text span { color: #ff5a5f; }
+    .btn-icon { width: 40px; height: 40px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); font-size: 20px; font-weight: bold; cursor: pointer; border: 1px solid #e5e7eb;}
+    
+    .map-bg { flex: 1; background-color: #e5e7eb; display: flex; align-items: center; justify-content: center; position: relative; background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M0,0 L100,100 M100,0 L0,100" stroke="%23d1d5db" stroke-width="1"/></svg>'); background-size: 100px 100px; }
+    
+    .cluster-marker { width: 50px; height: 50px; background-color: #111827; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; border: 3px solid #ff5a5f; position: absolute; top: 300px; left: 160px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
+    .user-marker { width: 24px; height: 24px; background-color: #3b82f6; border-radius: 50%; border: 4px solid white; position: absolute; top: 400px; left: 180px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+    .user-pulse { width: 40px; height: 40px; background-color: rgba(59, 130, 246, 0.3); border-radius: 50%; position: absolute; top: 396px; left: 176px; }
+
+    .bottom-controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; box-sizing: border-box; z-index: 10; }
+    .btn-primary { background-color: #ff5a5f; color: white; border: none; padding: 12px 24px; border-radius: 30px; font-weight: 700; font-size: 16px; box-shadow: 0 10px 15px -3px rgba(255, 90, 95, 0.4); flex: 1; margin: 0 10px; text-align: center; }
+
+    /* View 2: Compass Mode */
+    .compass-device { background-color: #111827; color: white; border-color: #374151; }
+    .compass-bg { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden;}
+    .radar-ring { width: 300px; height: 300px; border: 2px dashed #4b5563; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    .radar-ring-2 { width: 150px; height: 150px; border: 2px dashed #374151; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    .compass-arrow { width: 4px; height: 120px; background: linear-gradient(to top, rgba(255,90,95,0) 0%, #ff5a5f 100%); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); transform-origin: bottom center; }
+    .compass-point { position: absolute; width: 16px; height: 16px; background-color: white; border-radius: 50%; top: 35%; left: 65%; box-shadow: 0 0 10px 2px rgba(255,255,255,0.5); }
+    
+    .compass-info { position: absolute; bottom: 100px; text-align: center; width: 100%; }
+    .compass-info h2 { margin: 0; font-size: 32px; font-weight: 800; color: white; }
+    .compass-info p { margin: 5px 0 0 0; color: #9ca3af; font-size: 14px; }
+    
+    .compass-close { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 50px; height: 50px; background-color: #374151; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 20px; border: none;}
+  </style>
+</head>
+<body>
+  
+  <div>
+    <h2>1. Visão Core: Mapa Interativo (Clustering)</h2>
+    <div class="device">
+      <div class="map-header">
+        <div class="logo-text">SUN<span>SET</span></div>
+        <div class="btn-icon">⚙️</div>
+      </div>
+      
+      <div class="map-bg">
+        <div class="user-pulse"></div>
+        <div class="user-marker"></div>
+        <div class="cluster-marker">42</div>
+      </div>
+      
+      <div class="bottom-controls">
+        <div class="btn-icon" style="flex: none;">🎯</div>
+        <div class="btn-primary">📷 Novo Spot</div>
+        <div class="btn-icon" style="flex: none; background: #111827; color: white; border-color: #111827;">🧭</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <h2>2. Visão Imersiva: Modo Bússola / Radar (Offline First)</h2>
+    <div class="device compass-device">
+      <div class="compass-bg">
+        <div class="radar-ring"></div>
+        <div class="radar-ring-2"></div>
+        <div class="compass-arrow"></div>
+        <div class="compass-point"></div>
+        <div class="user-marker" style="top: 50%; left: 50%; transform: translate(-50%, -50%); border-color: #111827;"></div>
+      </div>
+
+      <div class="compass-info">
+        <h2>120m</h2>
+        <p>Aponte o celular e caminhe.</p>
+      </div>
+
+      <button class="compass-close">✕</button>
+    </div>
+  </div>
+
+</body>
+</html>
