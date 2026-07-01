@@ -98,12 +98,30 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
     fetchSpots();
   }, []);
 
-  // Seta 3D rotativa com base na bússola do celular
+  // Seta 3D rotativa com base na bússola do celular (SVG inline ultra-nítido e 100% transparente)
   const dynamicUserIcon = L.divIcon({
     className: "custom-user-pointer-leaflet-icon",
     html: `
-      <div style="transform: rotate(${heading}deg); transition: transform 0.1s ease-out; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.35));">
-        <img src="/arrow_3d.png" style="width: 100%; height: 100%; object-fit: contain;" alt="User Pointer" />
+      <div style="transform: rotate(${heading}deg); transition: transform 0.1s ease-out; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+        <svg width="44" height="44" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 6px 8px rgba(0,0,0,0.35));">
+          <defs>
+            <linearGradient id="sunset-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ff5a5f" />
+              <stop offset="50%" stop-color="#ff7e5f" />
+              <stop offset="100%" stop-color="#feb47b" />
+            </linearGradient>
+            <linearGradient id="border-glow" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="white" stop-opacity="0.8" />
+              <stop offset="100%" stop-color="black" stop-opacity="0.2" />
+            </linearGradient>
+          </defs>
+          <!-- Extrusão 3D (Base escura deslocada) -->
+          <path d="M50 5 L85 80 L50 68 L15 80 Z" fill="#b83b3f" />
+          <!-- Face Principal -->
+          <path d="M50 8 L82 76 L50 65 L18 76 Z" fill="url(#sunset-grad)" stroke="url(#border-glow)" stroke-width="1.5" />
+          <!-- Vinco de Luz Central -->
+          <path d="M50 8 L50 65" stroke="white" stroke-opacity="0.4" stroke-width="2" />
+        </svg>
       </div>
     `,
     iconSize: [44, 44],
@@ -170,9 +188,9 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
         </MarkerClusterGroup>
       </MapContainer>
       
-      {/* Bottom Controls Overlay (Subido para bottom-[18vh] para evitar sobrepor o handlebar do feed) */}
+      {/* Bottom Controls Overlay (Posicionado de forma responsiva logo acima do topo do sheet do feed) */}
       <div 
-        className={`absolute bottom-[18vh] w-full px-5 flex justify-between items-center z-[1000] transition-all duration-300 ${feedState === "collapsed" ? "opacity-100 pointer-events-none" : "opacity-0 pointer-events-none"}`}
+        className={`absolute bottom-[16.5vh] left-1/2 -translate-x-1/2 w-[90%] max-w-md flex justify-between items-center z-[1000] transition-all duration-300 ${feedState === "collapsed" ? "opacity-100 pointer-events-none" : "opacity-0 pointer-events-none"}`}
       >
         <button 
           className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg border border-gray-200 text-gray-700 pointer-events-auto active:bg-gray-50 active:scale-95 transition-transform"

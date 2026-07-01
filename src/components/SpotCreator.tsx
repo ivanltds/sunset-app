@@ -86,19 +86,37 @@ export default function SpotCreator({ initialPos, onClose, onSuccess }: SpotCrea
         throw new Error("Você não está autenticado (sessão fantasma não encontrada).");
       }
 
-      // 4. Salvar no Banco com o ID real da sessão
-      const { error: dbError } = await supabase.from("spots").insert({
-        title,
-        lat: pos[0],
-        lng: pos[1],
-        user_id: session.user.id,
-        image_url: imageUrl
-      });
+      // 4. Salvar no Banco com o ID real da sessão, solicitando o ID do Spot criado
+      const { data: spotData, error: dbError } = await supabase
+        .from("spots")
+        .insert({
+          title,
+          lat: pos[0],
+          lng: pos[1],
+          user_id: session.user.id,
+          image_url: imageUrl
+        })
+        .select("id")
+        .single();
 
       if (dbError) {
-         // Fallback caso a foreign key fale (Para testes se ghost_users não foi configurado).
          console.warn("Falha no Insert com user_id. Tentando sem user_id estrito ou reportando", dbError);
          throw dbError;
+      }
+
+      // 5. Salvar a foto também na tabela vinculada spot_photos para aparecer no feed!
+      if (spotData) {
+        const { error: photoError } = await supabase
+          .from("spot_photos")
+          .insert({
+            spot_id: spotData.id,
+            user_id: session.user.id,
+            image_url: imageUrl
+          });
+        
+        if (photoError) {
+          console.error("Erro ao salvar foto vinculada em spot_photos:", photoError);
+        }
       }
 
       onSuccess();
