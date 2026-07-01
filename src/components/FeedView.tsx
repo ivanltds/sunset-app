@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Star, Plus, Camera, X, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
@@ -294,7 +295,7 @@ export default function FeedView({ spots, feedState, setFeedState, onClose, onRe
 
       {/* Lightbox Modal para visualização em Tela Cheia com Zoom */}
       <AnimatePresence>
-        {activePhotoUrl && (
+        {activePhotoUrl && typeof window !== "undefined" && createPortal(
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -303,7 +304,10 @@ export default function FeedView({ spots, feedState, setFeedState, onClose, onRe
           >
             {/* Botão de Fechar */}
             <button 
-              onClick={() => setActivePhotoUrl(null)}
+              onClick={() => {
+                setActivePhotoUrl(null);
+                setZoomScale(1);
+              }}
               className="absolute top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-white rounded-full flex items-center justify-center z-[5001] backdrop-blur-md border border-white/20 cursor-pointer"
             >
               <X size={24} />
@@ -345,7 +349,8 @@ export default function FeedView({ spots, feedState, setFeedState, onClose, onRe
                 +
               </button>
             </div>
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
       </AnimatePresence>
       
