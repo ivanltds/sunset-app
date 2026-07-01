@@ -190,7 +190,7 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
       
       {/* Bottom Controls Overlay (Posicionado de forma responsiva logo acima do topo do sheet do feed) */}
       <div 
-        className={`absolute bottom-[16.5vh] left-1/2 -translate-x-1/2 w-[90%] max-w-md flex justify-between items-center z-[1000] transition-all duration-300 ${feedState === "collapsed" ? "opacity-100 pointer-events-none" : "opacity-0 pointer-events-none"}`}
+        className={`absolute bottom-[6.5vh] left-1/2 -translate-x-1/2 w-[90%] max-w-md flex justify-between items-center z-[1000] transition-all duration-300 ${feedState === "collapsed" ? "opacity-100 pointer-events-none" : "opacity-0 pointer-events-none"}`}
       >
         <button 
           className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg border border-gray-200 text-gray-700 pointer-events-auto active:bg-gray-50 active:scale-95 transition-transform"

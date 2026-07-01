@@ -112,14 +112,14 @@ export default function Home() {
   // 3. Splash Screen Premium enquanto obtém o primeiro GPS
   if (!userPos) {
     return (
-      <div className="fixed inset-0 z-[5000] flex flex-col items-center justify-center bg-gradient-to-tr from-[#ff5a5f] via-[#ff7e5f] to-[#feb47b] text-white">
+      <div className="fixed inset-0 z-[5000] flex flex-col items-center justify-center bg-white text-slate-900">
         <motion.div 
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="flex flex-col items-center"
         >
-          {/* Sol Abstrato em Glassmorphism */}
+          {/* Sol Abstrato em Glassmorphism Clean */}
           <motion.div 
             animate={{ 
               scale: [1, 1.06, 1],
@@ -130,16 +130,16 @@ export default function Home() {
               duration: 4, 
               ease: "easeInOut" 
             }}
-            className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30 shadow-2xl mb-6 relative overflow-hidden"
+            className="w-24 h-24 bg-slate-50/80 rounded-full flex items-center justify-center backdrop-blur-md border border-slate-200/80 shadow-md mb-6 relative overflow-hidden"
           >
-            <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white/30 to-transparent"></div>
-            <div className="w-10 h-10 bg-yellow-300 rounded-full shadow-[0_0_20px_rgba(253,224,71,0.8)]"></div>
+            <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-slate-200/40 to-transparent"></div>
+            <div className="w-10 h-10 bg-gradient-to-tr from-[#ff5a5f] to-yellow-400 rounded-full shadow-[0_0_15px_rgba(255,90,95,0.25)]"></div>
           </motion.div>
 
-          <h1 className="text-4xl font-black tracking-widest text-center drop-shadow-md">
-            SUN<span className="text-yellow-300">SET</span>
+          <h1 className="text-4xl font-black tracking-widest text-center">
+            <span className="text-[#0f172a]">SUN</span><span className="text-[#ff5a5f]">SET</span>
           </h1>
-          <p className="text-sm text-white/80 font-medium tracking-wide mt-2">Explorar spots de fotografia</p>
+          <p className="text-sm text-slate-500 font-medium tracking-wide mt-2">Explorar spots de fotografia</p>
         </motion.div>
 
         {/* Loader de Status */}
@@ -147,13 +147,13 @@ export default function Home() {
           <motion.div 
             animate={{ rotate: 360 }}
             transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
-            className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full"
+            className="w-6 h-6 border-2 border-slate-200 border-t-[#ff5a5f] rounded-full"
           />
           <motion.p 
             initial={{ opacity: 0 }}
             animate={{ opacity: [0.4, 1, 0.4] }}
             transition={{ repeat: Infinity, duration: 2 }}
-            className="text-xs font-semibold tracking-wider text-white/70 uppercase"
+            className="text-xs font-semibold tracking-wider text-slate-400 uppercase"
           >
             Buscando satélites GPS...
           </motion.p>
