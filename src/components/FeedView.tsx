@@ -6,8 +6,24 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Star, Plus, Camera, X, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
+// Helper para calcular distância usando a fórmula de Haversine
+const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371; // Raio da Terra em km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Retorna em km
+};
+
 interface FeedViewProps {
   spots: any[];
+  userPos: [number, number] | null;
   feedState: "full" | "half" | "collapsed";
   setFeedState: (state: "full" | "half" | "collapsed") => void;
   onClose?: () => void;
@@ -16,7 +32,16 @@ interface FeedViewProps {
   onBookmarksLoaded?: (bookmarkedIds: string[]) => void;
 }
 
-export default function FeedView({ spots, feedState, setFeedState, onClose, onRefresh, onBookmarkChange, onBookmarksLoaded }: FeedViewProps) {
+export default function FeedView({ 
+  spots, 
+  userPos, 
+  feedState, 
+  setFeedState, 
+  onClose, 
+  onRefresh, 
+  onBookmarkChange, 
+  onBookmarksLoaded 
+}: FeedViewProps) {
   const [photos, setPhotos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingPhoto, setAddingPhoto] = useState(false);
@@ -52,7 +77,22 @@ export default function FeedView({ spots, feedState, setFeedState, onClose, onRe
       .order("created_at", { ascending: false });
 
     if (photosData) {
-      setPhotos(photosData);
+      let processedPhotos = [...photosData];
+      
+      // Calcular distância e ordenar se a posição do usuário estiver disponível
+      if (userPos) {
+        processedPhotos = processedPhotos.map(photo => {
+          const lat = photo.spots?.lat ?? 0;
+          const lng = photo.spots?.lng ?? 0;
+          const distance = getDistance(userPos[0], userPos[1], lat, lng);
+          return { ...photo, distance };
+        });
+        
+        // Ordenar por proximidade ascendente
+        processedPhotos.sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0));
+      }
+      
+      setPhotos(processedPhotos);
       
       if (uid) {
         // Buscar likes e bookmarks do usuario atual
@@ -184,9 +224,18 @@ export default function FeedView({ spots, feedState, setFeedState, onClose, onRe
                 />
                 
                 <div className="absolute bottom-0 w-full p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex justify-between items-end">
-                  <span className="text-white text-xs font-bold truncate pr-2 shadow-sm">
-                    {photo.spots?.title || "Desconhecido"}
-                  </span>
+                  <div className="flex flex-col text-left truncate pr-2 select-none">
+                    <span className="text-white text-xs font-bold truncate shadow-sm">
+                      {photo.spots?.title || "Desconhecido"}
+                    </span>
+                    {photo.distance !== undefined && (
+                      <span className="text-white/80 text-[10px] font-semibold shadow-sm mt-0.5">
+                        {photo.distance < 1 
+                          ? `${Math.round(photo.distance * 1000)}m de você` 
+                          : `${photo.distance.toFixed(1)}km de você`}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex flex-col gap-2">
                     <button 
                       onClick={() => toggleLike(photo.spot_id)}

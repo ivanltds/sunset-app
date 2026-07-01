@@ -38,18 +38,36 @@ function RecenterAutomatically({ lat, lng, trigger }: { lat: number; lng: number
   return null;
 }
 
-// Component to detect map interactions
-function MapInteractions({ onMapClick }: { onMapClick: () => void }) {
-  useMapEvents({
+// Component to detect map interactions and bounds changes
+interface MapInteractionsProps {
+  onMapClick: () => void;
+  onBoundsChange: (bounds: L.LatLngBounds) => void;
+}
+
+function MapInteractions({ onMapClick, onBoundsChange }: MapInteractionsProps) {
+  const map = useMapEvents({
     click() {
       onMapClick();
     },
     dragstart() {
       onMapClick();
+    },
+    moveend() {
+      onBoundsChange(map.getBounds());
+    },
+    zoomend() {
+      onBoundsChange(map.getBounds());
     }
   });
+
+  useEffect(() => {
+    onBoundsChange(map.getBounds());
+  }, [map]);
+
   return null;
-}interface MapComponentProps {
+}
+
+interface MapComponentProps {
   userPos: [number, number];
   onOpenCreator?: () => void;
   onOpenCompass?: () => void;
@@ -63,6 +81,19 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
   
   // "full" (10% topo), "half" (50% topo), "collapsed" (85% topo)
   const [feedState, setFeedState] = useState<"full" | "half" | "collapsed">("half");
+  const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null);
+  const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
+
+  // Filtrar spots visíveis na viewport do mapa
+  const visibleSpots = spots.filter(spot => {
+    if (!mapBounds) return true;
+    return mapBounds.contains([spot.lat, spot.lng]);
+  });
+
+  // Se houver spot selecionado por clique, mostramos apenas ele. Senão, os visíveis.
+  const spotsForFeed = selectedSpotId 
+    ? spots.filter(s => s.id === selectedSpotId)
+    : visibleSpots;
 
   // Rastrear orientação do dispositivo (Bússola) para a seta 3D
   useEffect(() => {
@@ -143,7 +174,13 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
         />
 
         <RecenterAutomatically lat={userPos[0]} lng={userPos[1]} trigger={recenterTrigger} />
-        <MapInteractions onMapClick={() => setFeedState("collapsed")} />
+        <MapInteractions 
+          onMapClick={() => {
+            setFeedState("collapsed");
+            setSelectedSpotId(null); // Limpa seleção ao clicar no mapa
+          }} 
+          onBoundsChange={setMapBounds}
+        />
 
         {/* User Marker usando a seta 3D rotacionável */}
         <Marker position={userPos} icon={dynamicUserIcon}>
@@ -180,7 +217,20 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
             });
 
             return (
-              <Marker key={spot.id} position={[spot.lat, spot.lng]} icon={icon} zIndexOffset={1000}>
+              <Marker 
+                key={spot.id} 
+                position={[spot.lat, spot.lng]} 
+                icon={icon} 
+                zIndexOffset={1000}
+                eventHandlers={{
+                  click: (e) => {
+                    // Previne que o clique limpe a seleção no clique do mapa
+                    L.DomEvent.stopPropagation(e);
+                    setSelectedSpotId(spot.id);
+                    setFeedState("half"); // Abre o feed para focar nas fotos do Spot
+                  }
+                }}
+              >
                 <Popup>{spot.title}</Popup>
               </Marker>
             );
@@ -225,7 +275,8 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
 
       {/* Feed Bottom Sheet */}
       <FeedView 
-        spots={spots} 
+        spots={spotsForFeed} 
+        userPos={userPos}
         feedState={feedState}
         setFeedState={setFeedState}
         onBookmarksLoaded={(ids) => setBookmarkedSpotIds(new Set(ids))}
