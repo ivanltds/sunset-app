@@ -23,6 +23,8 @@ export default function FeedView({ spots, feedState, setFeedState, onClose, onRe
   const [likes, setLikes] = useState<Record<string, boolean>>({});
   const [bookmarks, setBookmarks] = useState<Record<string, boolean>>({});
   const [userId, setUserId] = useState<string | null>(null);
+  const [activePhotoUrl, setActivePhotoUrl] = useState<string | null>(null);
+  const [zoomScale, setZoomScale] = useState(1);
 
   useEffect(() => {
     fetchPhotos();
@@ -172,8 +174,12 @@ export default function FeedView({ spots, feedState, setFeedState, onClose, onRe
                 <img 
                   src={photo.image_url} 
                   alt="Spot Photo" 
-                  className="w-full h-auto object-cover bg-gray-100 min-h-[150px]"
+                  className="w-full h-auto object-cover bg-gray-100 min-h-[150px] cursor-pointer hover:opacity-95 transition-opacity"
                   loading="lazy"
+                  onClick={() => {
+                    setActivePhotoUrl(photo.image_url);
+                    setZoomScale(1);
+                  }}
                 />
                 
                 <div className="absolute bottom-0 w-full p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex justify-between items-end">
@@ -246,7 +252,6 @@ export default function FeedView({ spots, feedState, setFeedState, onClose, onRe
               id="feed-camera-input"
               type="file" 
               accept="image/*" 
-              capture="environment" 
               className="hidden" 
               onChange={async (e) => {
                 if(e.target.files && e.target.files.length > 0) {
@@ -283,6 +288,63 @@ export default function FeedView({ spots, feedState, setFeedState, onClose, onRe
                 }
               }} 
             />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Lightbox Modal para visualização em Tela Cheia com Zoom */}
+      <AnimatePresence>
+        {activePhotoUrl && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 z-[5000] flex flex-col items-center justify-center touch-none"
+          >
+            {/* Botão de Fechar */}
+            <button 
+              onClick={() => setActivePhotoUrl(null)}
+              className="absolute top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 active:scale-95 transition-all text-white rounded-full flex items-center justify-center z-[5001] backdrop-blur-md border border-white/20 cursor-pointer"
+            >
+              <X size={24} />
+            </button>
+
+            {/* Container da Imagem com suporte a Drag & Zoom */}
+            <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+              <motion.div
+                drag
+                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                dragElastic={0.5}
+                animate={{ scale: zoomScale }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
+              >
+                <img 
+                  src={activePhotoUrl} 
+                  alt="Zoom View" 
+                  className="max-w-[95vw] max-h-[85vh] object-contain select-none pointer-events-none rounded-lg shadow-2xl"
+                />
+              </motion.div>
+            </div>
+
+            {/* Controles Discretos de Zoom na base */}
+            <div className="absolute bottom-10 flex items-center gap-4 bg-white/10 px-6 py-3 rounded-full backdrop-blur-md border border-white/20 z-[5001]">
+              <button 
+                onClick={() => setZoomScale(prev => Math.max(1, prev - 0.5))}
+                className="w-10 h-10 flex items-center justify-center text-white hover:bg-white/10 rounded-full active:scale-90 transition-transform font-bold text-lg select-none cursor-pointer"
+              >
+                -
+              </button>
+              <span className="text-white text-sm font-semibold select-none w-16 text-center">
+                {Math.round(zoomScale * 100)}%
+              </span>
+              <button 
+                onClick={() => setZoomScale(prev => Math.min(4, prev + 0.5))}
+                className="w-10 h-10 flex items-center justify-center text-white hover:bg-white/10 rounded-full active:scale-90 transition-transform font-bold text-lg select-none cursor-pointer"
+              >
+                +
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -34,33 +34,18 @@ function DraggableMarker({ pos, setPos }: { pos: [number, number], setPos: (pos:
 }
 
 interface SpotCreatorProps {
+  initialPos: [number, number];
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function SpotCreator({ onClose, onSuccess }: SpotCreatorProps) {
-  const [pos, setPos] = useState<[number, number] | null>(null);
+export default function SpotCreator({ initialPos, onClose, onSuccess }: SpotCreatorProps) {
+  const [pos, setPos] = useState<[number, number]>(initialPos);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // Capturar GPS inicial
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (p) => setPos([p.coords.latitude, p.coords.longitude]),
-        (err) => {
-          console.warn(err);
-          setPos([-23.55052, -46.633308]); // Fallback pra testes
-        },
-        { enableHighAccuracy: true }
-      );
-    } else {
-      setPos([-23.55052, -46.633308]);
-    }
-  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -148,7 +133,7 @@ export default function SpotCreator({ onClose, onSuccess }: SpotCreatorProps) {
             <Camera size={40} className="text-gray-400 mb-2" />
             <span className="text-gray-600 font-semibold">Tirar Foto</span>
             <span className="text-xs text-gray-400 mt-1">A câmera será aberta</span>
-            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+            <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
           </label>
         ) : (
           <div className="w-full h-48 shrink-0 rounded-3xl overflow-hidden mb-6 relative border border-gray-200">

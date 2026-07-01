@@ -49,33 +49,45 @@ function MapInteractions({ onMapClick }: { onMapClick: () => void }) {
     }
   });
   return null;
+}interface MapComponentProps {
+  userPos: [number, number];
+  onOpenCreator?: () => void;
+  onOpenCompass?: () => void;
 }
 
-export default function MapComponent({ onOpenCreator, onOpenCompass }: { onOpenCreator?: () => void, onOpenCompass?: () => void }) {
-  const [userPos, setUserPos] = useState<[number, number] | null>(null);
+export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: MapComponentProps) {
   const [spots, setSpots] = useState<any[]>([]);
   const [bookmarkedSpotIds, setBookmarkedSpotIds] = useState<Set<string>>(new Set());
   const [recenterTrigger, setRecenterTrigger] = useState(0);
+  const [heading, setHeading] = useState(0);
   
   // "full" (10% topo), "half" (50% topo), "collapsed" (85% topo)
   const [feedState, setFeedState] = useState<"full" | "half" | "collapsed">("half");
 
+  // Rastrear orientação do dispositivo (Bússola) para a seta 3D
   useEffect(() => {
-    // Buscar localização real do usuário
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
-        (err) => {
-          console.error("Erro de GPS:", err);
-          setUserPos([-23.55052, -46.633308]); // Fallback Sao Paulo
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
-    } else {
-      setUserPos([-23.55052, -46.633308]); // Fallback Sao Paulo
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      // webkitCompassHeading é nativo do Safari/iOS. alpha é o padrão, corrigido
+      const headingVal = (e as any).webkitCompassHeading !== undefined
+        ? (e as any).webkitCompassHeading
+        : (e.alpha !== null ? 360 - e.alpha : 0);
+      
+      setHeading(headingVal);
+    };
+
+    if (typeof window !== "undefined" && window.DeviceOrientationEvent) {
+      window.addEventListener("deviceorientation", handleOrientation, true);
     }
 
-    // Fetch spots from Supabase
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("deviceorientation", handleOrientation);
+      }
+    };
+  }, []);
+
+  // Fetch dos spots do Supabase
+  useEffect(() => {
     const fetchSpots = async () => {
       const { data, error } = await supabase.from("spots").select("*");
       if (!error && data) {
@@ -86,7 +98,17 @@ export default function MapComponent({ onOpenCreator, onOpenCompass }: { onOpenC
     fetchSpots();
   }, []);
 
-  if (!userPos) return <div className="flex-1 flex items-center justify-center bg-gray-100">Obtendo GPS...</div>;
+  // Seta 3D rotativa com base na bússola do celular
+  const dynamicUserIcon = L.divIcon({
+    className: "custom-user-pointer-leaflet-icon",
+    html: `
+      <div style="transform: rotate(${heading}deg); transition: transform 0.1s ease-out; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.35));">
+        <img src="/arrow_3d.png" style="width: 100%; height: 100%; object-fit: contain;" alt="User Pointer" />
+      </div>
+    `,
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+  });
 
   return (
     <div className="absolute inset-0 z-0">
@@ -105,8 +127,8 @@ export default function MapComponent({ onOpenCreator, onOpenCompass }: { onOpenC
         <RecenterAutomatically lat={userPos[0]} lng={userPos[1]} trigger={recenterTrigger} />
         <MapInteractions onMapClick={() => setFeedState("collapsed")} />
 
-        {/* User Marker */}
-        <Marker position={userPos} icon={userIcon}>
+        {/* User Marker usando a seta 3D rotacionável */}
+        <Marker position={userPos} icon={dynamicUserIcon}>
           <Popup>Você está aqui!</Popup>
         </Marker>
 
@@ -119,7 +141,7 @@ export default function MapComponent({ onOpenCreator, onOpenCompass }: { onOpenC
           {spots.map((spot) => {
             const isSaved = bookmarkedSpotIds.has(spot.id);
             
-            // Construir HTML customizado para o ícone
+            // Construir HTML customizado para o ícone do Spot
             const iconHtml = `
               <div style="position: relative; width: 48px; height: 48px; filter: drop-shadow(0px 8px 8px rgba(0,0,0,0.25)); transition: transform 0.2s; cursor: pointer;">
                 <img src="/camera_3d.png" style="width: 100%; height: 100%; object-fit: contain;" alt="Camera" />
@@ -133,7 +155,7 @@ export default function MapComponent({ onOpenCreator, onOpenCompass }: { onOpenC
 
             const icon = new L.DivIcon({
               html: iconHtml,
-              className: 'custom-leaflet-div-icon', // Classe vazia para resetar estilos default do leaflet
+              className: 'custom-leaflet-div-icon',
               iconSize: [48, 48],
               iconAnchor: [24, 24],
               popupAnchor: [0, -24],
@@ -148,23 +170,14 @@ export default function MapComponent({ onOpenCreator, onOpenCompass }: { onOpenC
         </MarkerClusterGroup>
       </MapContainer>
       
-      {/* Bottom Controls Overlay (visible when feed is collapsed) */}
+      {/* Bottom Controls Overlay (Subido para bottom-[18vh] para evitar sobrepor o handlebar do feed) */}
       <div 
-        className={`absolute bottom-6 w-full px-5 flex justify-between items-center z-[1000] transition-opacity duration-300 ${feedState === "collapsed" ? "opacity-100 pointer-events-none" : "opacity-0 pointer-events-none"}`}
+        className={`absolute bottom-[18vh] w-full px-5 flex justify-between items-center z-[1000] transition-all duration-300 ${feedState === "collapsed" ? "opacity-100 pointer-events-none" : "opacity-0 pointer-events-none"}`}
       >
         <button 
-          className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg border border-gray-200 text-gray-700 pointer-events-auto active:bg-gray-50"
+          className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg border border-gray-200 text-gray-700 pointer-events-auto active:bg-gray-50 active:scale-95 transition-transform"
           onClick={() => {
-            if (navigator.geolocation) {
-              navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                  setUserPos([pos.coords.latitude, pos.coords.longitude]);
-                  setRecenterTrigger(prev => prev + 1);
-                },
-                (err) => console.error(err),
-                { enableHighAccuracy: true }
-              );
-            }
+            setRecenterTrigger(prev => prev + 1); // Recentraliza instantaneamente com a posição cacheada
           }}
           disabled={feedState !== "collapsed"}
         >
@@ -182,7 +195,7 @@ export default function MapComponent({ onOpenCreator, onOpenCompass }: { onOpenC
         </button>
 
         <button 
-          className="w-12 h-12 bg-gray-900 text-white rounded-full flex items-center justify-center shadow-lg border border-gray-800 pointer-events-auto active:bg-gray-800 transition-colors"
+          className="w-12 h-12 bg-gray-900 text-white rounded-full flex items-center justify-center shadow-lg border border-gray-800 pointer-events-auto active:bg-gray-800 active:scale-95 transition-all"
           onClick={() => {
             if (onOpenCompass && feedState === "collapsed") onOpenCompass();
           }}
