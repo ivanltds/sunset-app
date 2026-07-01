@@ -6,6 +6,7 @@ declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
     __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
   }
+  interface ServiceWorkerGlobalScope extends WorkerGlobalScope {}
 }
 
 declare const self: ServiceWorkerGlobalScope;
