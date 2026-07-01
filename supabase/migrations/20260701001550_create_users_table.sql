@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS public.users (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  device_id UUID UNIQUE NOT NULL, -- Ghost Account identifier
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   last_active TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -8,21 +7,33 @@ CREATE TABLE IF NOT EXISTS public.users (
 -- Habilitar RLS (Row Level Security)
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
--- Políticas de segurança
--- Permitir anon inserção
-CREATE POLICY "Anon can insert ghost account" 
-  ON public.users FOR INSERT 
-  TO anon
-  WITH CHECK (true);
+-- Conceder permissões básicas para as roles do Supabase
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT ALL ON TABLE public.users TO anon, authenticated;
 
--- Permitir leitura do próprio ghost account baseado no device_id
-CREATE POLICY "Anon can read own ghost account" 
+-- O usuário autenticado (incluindo o anônimo oficial do Supabase) só pode ler e alterar o PRÓPRIO registro.
+CREATE POLICY "Users can view own profile" 
   ON public.users FOR SELECT 
-  TO anon
-  USING (true);
+  USING (auth.uid() = id);
 
--- Permitir update do last_active
-CREATE POLICY "Anon can update own ghost account" 
+CREATE POLICY "Users can insert own profile" 
+  ON public.users FOR INSERT 
+  WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile" 
   ON public.users FOR UPDATE 
-  TO anon
-  USING (true);
+  USING (auth.uid() = id);
+
+-- Criar um trigger no auth.users para criar automaticamente a linha pública de profile
+create or replace function public.handle_new_user() 
+returns trigger as $$
+begin
+  insert into public.users (id)
+  values (new.id);
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
