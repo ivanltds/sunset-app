@@ -292,13 +292,13 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
 
         <div className="relative pointer-events-auto flex-shrink-0">
           {showCompassTutorial && feedState === "collapsed" && (
-            <div className="absolute bottom-full mb-3 right-0 w-48 bg-gray-900 text-white text-xs p-3 rounded-xl shadow-2xl animate-bounce after:content-[''] after:absolute after:top-full after:right-4 after:border-8 after:border-transparent after:border-t-gray-900">
+            <div className="absolute bottom-full mb-3 right-0 w-48 bg-white text-gray-900 border border-gray-200 text-xs p-3 rounded-xl shadow-2xl animate-bounce after:content-[''] after:absolute after:top-full after:right-4 after:border-8 after:border-transparent after:border-t-white">
               <span className="font-bold block mb-1">Novo: Bússola Solar 🌅</span>
-              Descubra exatamante onde o sol vai nascer!
+              Descubra exatamente onde o sol vai nascer ou se pôr!
             </div>
           )}
           <button 
-            className="w-12 h-12 bg-gray-900 text-[#ff5a5f] rounded-full flex items-center justify-center shadow-lg border border-gray-800 active:bg-gray-800 active:scale-95 transition-all"
+            className="w-12 h-12 bg-white text-[#ff5a5f] rounded-full flex items-center justify-center shadow-lg border border-gray-200 active:bg-gray-50 active:scale-95 transition-all"
             onClick={() => {
               if (showCompassTutorial) {
                 setShowCompassTutorial(false);
