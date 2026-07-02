@@ -25,7 +25,34 @@ const userIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
-import { LocateFixed, Camera, Compass } from "lucide-react";
+const defaultSpotIcon = new L.DivIcon({
+  html: `
+    <div style="position: relative; width: 48px; height: 48px; filter: drop-shadow(0px 8px 8px rgba(0,0,0,0.25)); transition: transform 0.2s; cursor: pointer;">
+      <img src="/camera_3d.png" style="width: 100%; height: 100%; object-fit: contain;" alt="Camera" />
+    </div>
+  `,
+  className: 'custom-leaflet-div-icon',
+  iconSize: [48, 48],
+  iconAnchor: [24, 24],
+  popupAnchor: [0, -24],
+});
+
+const savedSpotIcon = new L.DivIcon({
+  html: `
+    <div style="position: relative; width: 48px; height: 48px; filter: drop-shadow(0px 8px 8px rgba(0,0,0,0.25)); transition: transform 0.2s; cursor: pointer;">
+      <img src="/camera_3d.png" style="width: 100%; height: 100%; object-fit: contain;" alt="Camera" />
+      <div style="position: absolute; top: -6px; right: -6px; width: 28px; height: 28px; filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.3));">
+        <img src="/star_3d.png" style="width: 100%; height: 100%; object-fit: contain;" alt="Saved" />
+      </div>
+    </div>
+  `,
+  className: 'custom-leaflet-div-icon',
+  iconSize: [48, 48],
+  iconAnchor: [24, 24],
+  popupAnchor: [0, -24],
+});
+
+import { LocateFixed, MapPinPlus, Compass } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import FeedView from "./FeedView";
 
@@ -62,10 +89,10 @@ function MapInteractions({ onMapClick, onBoundsChange }: MapInteractionsProps) {
       onMapClick();
     },
     moveend() {
-      onBoundsChange(map.getBounds());
+      setTimeout(() => onBoundsChange(map.getBounds()), 0);
     },
     zoomend() {
-      onBoundsChange(map.getBounds());
+      setTimeout(() => onBoundsChange(map.getBounds()), 0);
     }
   });
 
@@ -144,34 +171,36 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
   }, []);
 
   // Seta 3D rotativa com base na bússola do celular (SVG inline ultra-nítido e 100% transparente)
-  const dynamicUserIcon = L.divIcon({
-    className: "custom-user-pointer-leaflet-icon",
-    html: `
-      <div style="transform: rotate(${heading}deg); transition: transform 0.1s ease-out; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
-        <svg width="44" height="44" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 6px 8px rgba(0,0,0,0.35));">
-          <defs>
-            <linearGradient id="sunset-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#ff5a5f" />
-              <stop offset="50%" stop-color="#ff7e5f" />
-              <stop offset="100%" stop-color="#feb47b" />
-            </linearGradient>
-            <linearGradient id="border-glow" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="white" stop-opacity="0.8" />
-              <stop offset="100%" stop-color="black" stop-opacity="0.2" />
-            </linearGradient>
-          </defs>
-          <!-- Extrusão 3D (Base escura deslocada) -->
-          <path d="M50 5 L85 80 L50 68 L15 80 Z" fill="#b83b3f" />
-          <!-- Face Principal -->
-          <path d="M50 8 L82 76 L50 65 L18 76 Z" fill="url(#sunset-grad)" stroke="url(#border-glow)" stroke-width="1.5" />
-          <!-- Vinco de Luz Central -->
-          <path d="M50 8 L50 65" stroke="white" stroke-opacity="0.4" stroke-width="2" />
-        </svg>
-      </div>
-    `,
-    iconSize: [44, 44],
-    iconAnchor: [22, 22],
-  });
+  const dynamicUserIcon = useMemo(() => {
+    return L.divIcon({
+      className: "custom-user-pointer-leaflet-icon",
+      html: `
+        <div style="transform: rotate(${heading}deg); transition: transform 0.1s ease-out; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+          <svg width="44" height="44" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 6px 8px rgba(0,0,0,0.35));">
+            <defs>
+              <linearGradient id="sunset-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#ff5a5f" />
+                <stop offset="50%" stop-color="#ff7e5f" />
+                <stop offset="100%" stop-color="#feb47b" />
+              </linearGradient>
+              <linearGradient id="border-glow" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="white" stop-opacity="0.8" />
+                <stop offset="100%" stop-color="black" stop-opacity="0.2" />
+              </linearGradient>
+            </defs>
+            <!-- Extrusão 3D (Base escura deslocada) -->
+            <path d="M50 5 L85 80 L50 68 L15 80 Z" fill="#b83b3f" />
+            <!-- Face Principal -->
+            <path d="M50 8 L82 76 L50 65 L18 76 Z" fill="url(#sunset-grad)" stroke="url(#border-glow)" stroke-width="1.5" />
+            <!-- Vinco de Luz Central -->
+            <path d="M50 8 L50 65" stroke="white" stroke-opacity="0.4" stroke-width="2" />
+          </svg>
+        </div>
+      `,
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+    });
+  }, [heading]);
 
   return (
     <div className="absolute inset-0 z-0">
@@ -197,9 +226,7 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
         />
 
         {/* User Marker usando a seta 3D rotacionável */}
-        <Marker position={userPos} icon={dynamicUserIcon}>
-          <Popup>Você está aqui!</Popup>
-        </Marker>
+        <Marker position={userPos} icon={dynamicUserIcon} />
 
         {/* Clustering Spots */}
         <MarkerClusterGroup
@@ -209,26 +236,7 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
         >
           {spots.map((spot) => {
             const isSaved = bookmarkedSpotIds.has(spot.id);
-            
-            // Construir HTML customizado para o ícone do Spot
-            const iconHtml = `
-              <div style="position: relative; width: 48px; height: 48px; filter: drop-shadow(0px 8px 8px rgba(0,0,0,0.25)); transition: transform 0.2s; cursor: pointer;">
-                <img src="/camera_3d.png" style="width: 100%; height: 100%; object-fit: contain;" alt="Camera" />
-                ${isSaved ? `
-                  <div style="position: absolute; top: -6px; right: -6px; width: 28px; height: 28px; filter: drop-shadow(0px 4px 4px rgba(0,0,0,0.3));">
-                    <img src="/star_3d.png" style="width: 100%; height: 100%; object-fit: contain;" alt="Saved" />
-                  </div>
-                ` : ''}
-              </div>
-            `;
-
-            const icon = new L.DivIcon({
-              html: iconHtml,
-              className: 'custom-leaflet-div-icon',
-              iconSize: [48, 48],
-              iconAnchor: [24, 24],
-              popupAnchor: [0, -24],
-            });
+            const icon = isSaved ? savedSpotIcon : defaultSpotIcon;
 
             return (
               <Marker 
@@ -244,9 +252,7 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
                     setFeedState("half"); // Abre o feed para focar nas fotos do Spot
                   }
                 }}
-              >
-                <Popup>{spot.title}</Popup>
-              </Marker>
+              />
             );
           })}
         </MarkerClusterGroup>
@@ -273,7 +279,7 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
           }}
           disabled={feedState !== "collapsed"}
         >
-          <Camera size={22} /> Novo Spot
+          <MapPinPlus size={22} /> Novo Spot
         </button>
 
         <button 
