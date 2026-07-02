@@ -225,8 +225,8 @@ export default function FeedView({
       </div>
 
       <div className="px-6 py-2 flex justify-between items-center shrink-0">
-        <h2 className="text-2xl font-bold text-gray-900">Arredores</h2>
-        <span className="text-sm text-gray-500 font-semibold bg-gray-100 px-3 py-1 rounded-full">
+        <h2 className="text-2xl font-bold text-gray-900 line-clamp-1">{spots.length === 1 ? spots[0].title : "Arredores"}</h2>
+        <span className="text-sm text-gray-500 font-semibold bg-gray-100 px-3 py-1 rounded-full whitespace-nowrap ml-4">
           {photos.length} Fotos
         </span>
       </div>
@@ -292,7 +292,7 @@ export default function FeedView({
       </div>
 
       {/* FAB para adicionar nova foto no feed */}
-      <div className="absolute bottom-6 right-6 z-50">
+      <div className={`fixed bottom-6 right-6 z-[2500] transition-all duration-300 ${feedState === "collapsed" ? "opacity-0 pointer-events-none translate-y-10" : "opacity-100 translate-y-0"}`}>
         <button 
           onClick={() => setAddingPhoto(true)}
           className="bg-[#ff5a5f] w-14 h-14 rounded-full flex items-center justify-center text-white text-2xl shadow-[0_10px_20px_-5px_rgba(255,90,95,0.4)] hover:scale-105 active:scale-95 transition-transform"
