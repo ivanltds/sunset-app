@@ -264,14 +264,14 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
 
           <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${hideCompass ? 'opacity-0' : 'opacity-100'}`}>
             {/* Toggle Alternative Event Button */}
-            <div className="absolute top-6 right-6 z-40">
+            <div className="absolute top-6 right-4 z-40 max-w-[130px] flex justify-end">
               <button
                 onClick={() => {
                   setShowAlternativeEvent(!showAlternativeEvent);
                   setDiscoveryPhase("idle");
                   setTwilightOpacity(0);
                 }}
-                className={`px-4 py-2 rounded-full font-bold text-sm shadow-md transition-colors duration-300 ${isDarkTheme ? 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                className={`px-3 py-1.5 rounded-full font-bold text-xs shadow-md transition-colors duration-300 leading-tight text-right ${isDarkTheme ? 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
               >
                 Próximo {eventType === "sunrise" ? "Pôr" : "Nascer"} do Sol
               </button>
