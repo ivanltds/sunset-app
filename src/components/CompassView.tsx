@@ -13,6 +13,7 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
   const [sensorStatus, setSensorStatus] = useState<"idle" | "requesting" | "active" | "denied">("idle");
   const [needleColor, setNeedleColor] = useState("rgb(255, 90, 95)");
   const [discoveryPhase, setDiscoveryPhase] = useState<"idle" | "twilight" | "message" | "done">("idle");
+  const [twilightOpacity, setTwilightOpacity] = useState(0);
   const alignmentTimer = useRef<NodeJS.Timeout | null>(null);
 
   const startSensors = async () => {
@@ -138,6 +139,17 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
     
     setNeedleColor(`rgb(${r}, ${g}, ${b})`);
 
+    // Controle de Opacidade do Fundo Crepuscular
+    if (discoveryPhase === "done") {
+      // 0 diff = 1 opacity. 35+ diff = 0 opacity.
+      const op = Math.max(0, 1 - (diff / 35));
+      setTwilightOpacity(op);
+    } else if (discoveryPhase === "twilight" || discoveryPhase === "message") {
+      setTwilightOpacity(1);
+    } else {
+      setTwilightOpacity(0);
+    }
+
     // Disparar o "Aha Moment" se a mira ficar muito próxima (menos de 8 graus) e estabilizar
     if (diff < 8 && sensorStatus === "active" && discoveryPhase === "idle") {
       if (!alignmentTimer.current) {
@@ -150,7 +162,7 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
             
             setTimeout(() => {
               setDiscoveryPhase("done"); // Fades message out, compass back in
-            }, 5000); // Mensagem dura 5 segundos na tela
+            }, 4000); // Mensagem dura 4 segundos na tela
             
           }, 2500); // Gradiente pulsa por 2.5s antes da mensagem
           
@@ -191,21 +203,22 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
     return () => clearInterval(interval);
   }, [targetDate]);
 
-  const isDiscovered = discoveryPhase !== "idle";
+  const isDarkTheme = twilightOpacity > 0.4;
   const hideCompass = discoveryPhase === "message";
 
   return (
-    <div className={`flex-1 w-full flex flex-col items-center justify-center relative overflow-hidden transition-colors duration-1000 z-10 ${isDiscovered ? 'bg-transparent' : 'bg-white'}`}>
+    <div className="flex-1 w-full bg-white flex flex-col items-center justify-center relative overflow-hidden text-gray-900 z-10 transition-colors duration-1000">
       
       {/* Twilight Animation Overlay */}
       <div 
-        className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-[2000ms] ease-in-out ${isDiscovered ? 'opacity-100' : 'opacity-0'}`}
+        className="absolute inset-0 z-0 pointer-events-none transition-opacity duration-300 ease-linear"
         style={{
-          background: 'linear-gradient(to top, #ff9a44, #fc6076, #3b82f6)'
+          background: 'linear-gradient(to top, #ff9a44, #fc6076, #3b82f6)',
+          opacity: twilightOpacity
         }}
       >
          {/* Animated Sun Glow */}
-         <div className={`absolute left-1/2 -translate-x-1/2 w-48 h-48 bg-[#ffdd55] rounded-full blur-[60px] opacity-80 transition-all duration-[3000ms] ${isDiscovered ? 'bottom-20 scale-150' : '-bottom-20 scale-50'}`}></div>
+         <div className={`absolute left-1/2 -translate-x-1/2 w-48 h-48 bg-[#ffdd55] rounded-full blur-[60px] opacity-80 transition-all duration-300 ${twilightOpacity > 0 ? 'bottom-20 scale-150' : '-bottom-20 scale-50'}`}></div>
       </div>
       
       {sensorStatus !== "active" ? (
@@ -233,7 +246,7 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
             <div className="absolute w-[150px] h-[150px] rounded-full border-2 border-dashed border-gray-400 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-70"></div>
             
             {/* Target Indicator */}
-            <div className={`absolute top-16 font-bold text-xl flex flex-col items-center z-20 left-1/2 -translate-x-1/2 w-full transition-colors duration-1000 ${isDiscovered ? 'text-white' : 'text-[#ff5a5f]'}`}>
+            <div className={`absolute top-16 font-bold text-xl flex flex-col items-center z-20 left-1/2 -translate-x-1/2 w-full transition-colors duration-[800ms] ${isDarkTheme ? 'text-white' : 'text-[#ff5a5f]'}`}>
               {eventType === "sunrise" ? <Sunrise size={32} className="mb-2" /> : <Sunset size={32} className="mb-2" />}
               <span>{eventType === "sunrise" ? "Nascer do Sol" : "Pôr do Sol"}</span>
             </div>
@@ -244,10 +257,10 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
               style={{ transform: `translate(-50%, -50%) rotate(${-heading}deg)` }}
             >
               {/* Cardinal Indicators (Fixos na borda do círculo de 300px) */}
-              <div className={`absolute top-2 left-1/2 -translate-x-1/2 font-bold text-lg transition-colors duration-1000 ${isDiscovered ? 'text-white/80' : 'text-gray-400'}`}>N</div>
-              <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 font-bold text-lg transition-colors duration-1000 ${isDiscovered ? 'text-white/80' : 'text-gray-400'}`}>S</div>
-              <div className={`absolute right-4 top-1/2 -translate-y-1/2 font-bold text-lg transition-colors duration-1000 ${isDiscovered ? 'text-white/80' : 'text-gray-400'}`}>L</div>
-              <div className={`absolute left-4 top-1/2 -translate-y-1/2 font-bold text-lg transition-colors duration-1000 ${isDiscovered ? 'text-white/80' : 'text-gray-400'}`}>O</div>
+              <div className={`absolute top-2 left-1/2 -translate-x-1/2 font-bold text-lg transition-colors duration-[800ms] ${isDarkTheme ? 'text-white/80' : 'text-gray-400'}`}>N</div>
+              <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 font-bold text-lg transition-colors duration-[800ms] ${isDarkTheme ? 'text-white/80' : 'text-gray-400'}`}>S</div>
+              <div className={`absolute right-4 top-1/2 -translate-y-1/2 font-bold text-lg transition-colors duration-[800ms] ${isDarkTheme ? 'text-white/80' : 'text-gray-400'}`}>L</div>
+              <div className={`absolute left-4 top-1/2 -translate-y-1/2 font-bold text-lg transition-colors duration-[800ms] ${isDarkTheme ? 'text-white/80' : 'text-gray-400'}`}>O</div>
 
               {/* The needle pointing to the Target Azimuth in the rotated div */}
               <div 
@@ -272,17 +285,17 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
             </div>
             
             {/* User Center (Fixo na tela, acima do mundo que gira) */}
-            <div className={`absolute w-6 h-6 border-4 border-white rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 shadow-md transition-colors duration-1000 ${isDiscovered ? 'bg-white' : 'bg-gray-900'}`}></div>
+            <div className={`absolute w-6 h-6 border-4 border-white rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 shadow-md transition-colors duration-[800ms] ${isDarkTheme ? 'bg-white' : 'bg-gray-900'}`}></div>
 
             {/* Info */}
             <div className="absolute bottom-24 text-center w-full px-6 z-20">
-              <h2 className={`text-6xl font-extrabold mb-1 tracking-tight transition-colors duration-1000 ${isDiscovered ? 'text-white' : 'text-gray-900'}`}>
+              <h2 className={`text-6xl font-extrabold mb-1 tracking-tight transition-colors duration-[800ms] ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
                 {targetDate ? targetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "..."}
               </h2>
-              <p className={`font-bold mb-4 uppercase tracking-widest text-sm transition-colors duration-1000 ${isDiscovered ? 'text-white/90' : 'text-[#ff5a5f]'}`}>
+              <p className={`font-bold mb-4 uppercase tracking-widest text-sm transition-colors duration-[800ms] ${isDarkTheme ? 'text-white/90' : 'text-[#ff5a5f]'}`}>
                 {timeRemaining ? `Faltam ${timeRemaining.replace("h ", "h").replace("m ", "m").replace("s", "s")}` : "Calculando..."}
               </p>
-              <p className={`text-sm max-w-[260px] mx-auto transition-colors duration-1000 ${isDiscovered ? 'text-white/80' : 'text-gray-500'}`}>
+              <p className={`text-sm max-w-[260px] mx-auto transition-colors duration-[800ms] ${isDarkTheme ? 'text-white/80' : 'text-gray-500'}`}>
                 Gire o celular até alinhar o ponto laranja com o {eventType === "sunrise" ? "Nascer" : "Pôr"} do Sol.
               </p>
             </div>
