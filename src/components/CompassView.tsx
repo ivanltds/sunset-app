@@ -236,8 +236,8 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
         <>
           {/* Organic Success Message (Centralizada, sem modal) */}
           <div className={`absolute inset-0 flex flex-col items-center justify-center px-8 z-30 transition-all duration-[1500ms] pointer-events-none ${discoveryPhase === "message" ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
-            <p className="text-white text-5xl font-extrabold mb-4 text-center leading-tight">🎉 Perfeito!</p>
-            <p className="text-white/95 text-2xl font-medium text-center drop-shadow-md">É pra lá que c deve apontar sua câmera!</p>
+            <p className="text-white text-5xl font-extrabold mb-4 text-center leading-tight">Perfeito!</p>
+            <p className="text-white/95 text-2xl font-medium text-center drop-shadow-md">É para lá que você deve apontar sua câmera!</p>
           </div>
 
           <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${hideCompass ? 'opacity-0' : 'opacity-100'}`}>
