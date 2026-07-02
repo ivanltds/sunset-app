@@ -74,8 +74,10 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
           setEventType(eType);
 
           const position = SunCalc.getPosition(tTime, lat, lng);
-          // Converter azimuth de radianos a partir do Sul para graus a partir do Norte
-          const azimuthDeg = (position.azimuth * 180 / Math.PI) + 180;
+          // Converter azimuth de radianos a partir do Sul para graus a partir do Norte com wrap seguro
+          let az = position.azimuth * 180 / Math.PI; // Graus a partir do sul
+          let azimuthDeg = (az + 180) % 360;
+          if (azimuthDeg < 0) azimuthDeg += 360;
           setTargetAzimuth(azimuthDeg);
         },
         (err) => console.warn(err),
@@ -107,8 +109,7 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
     if (diff > 180) diff -= 360;
     if (diff < -180) diff += 360;
 
-    // Filtro Passa-Baixa (Suaviza o tremor absurdo dos sensores Android)
-    // Movimenta o ponteiro em "degraus" macios de 15% em direção ao alvo real
+    // Filtro Passa-Baixa
     let smoothedHeading = current + diff * 0.15; 
     
     lastHeading.current = smoothedHeading;
@@ -136,7 +137,7 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
       setTimeRemaining(`${hours}h ${mins}m ${secs}s`);
     };
 
-    updateCountdown(); // Call immediately
+    updateCountdown(); 
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
   }, [targetDate]);
@@ -167,14 +168,20 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
             <span>{eventType === "sunrise" ? "Nascer do Sol" : "Pôr do Sol"}</span>
           </div>
 
-          {/* User Center */}
-          <div className="absolute w-6 h-6 border-4 border-white bg-[#ff5a5f] rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 shadow-[0_0_15px_3px_rgba(255,90,95,0.4)]"></div>
-
-          {/* Compass Needle (Rotates via CSS based on real sensor) */}
+          {/* Compass World (Rotates via CSS based on real sensor) */}
           <div 
             className="absolute w-full h-full top-0 left-0 transition-transform duration-75 ease-linear pointer-events-none"
             style={{ transform: `rotate(${-heading}deg)` }}
           >
+            {/* Cardinal Indicators */}
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 text-gray-400 font-bold text-lg">N</div>
+            <div className="absolute bottom-40 left-1/2 -translate-x-1/2 text-gray-400 font-bold text-lg">S</div>
+            <div className="absolute right-10 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">L</div>
+            <div className="absolute left-10 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">O</div>
+
+            {/* User Center */}
+            <div className="absolute w-6 h-6 border-4 border-white bg-[#ff5a5f] rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 shadow-[0_0_15px_3px_rgba(255,90,95,0.4)]"></div>
+
             {/* The needle pointing to the Target Azimuth in the rotated div */}
             <div 
               className="absolute w-full h-full top-0 left-0 transition-transform duration-500 ease-in-out"
