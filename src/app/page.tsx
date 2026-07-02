@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabaseClient";
 import CompassView from "@/components/CompassView";
-import { Settings } from "lucide-react";
+import { Settings, X, Download } from "lucide-react";
 
 // Import Map dynamically to avoid SSR errors with Leaflet
 const MapEngine = dynamic(() => import("@/components/MapComponent"), {
@@ -23,6 +23,11 @@ export default function Home() {
   const [showCreator, setShowCreator] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
+  
+  // PWA Install State
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isIOS, setIsIOS] = useState(false);
 
   const addLog = (msg: string) => {
     setLogs((prev) => [...prev, msg]);
@@ -109,6 +114,54 @@ export default function Home() {
     login();
   }, []);
 
+  // 3. PWA Install Prompt Logic
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hasDismissed = localStorage.getItem("pwa_prompt_dismissed");
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    
+    if (isStandalone || hasDismissed) return;
+
+    // Detect iOS
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+    setIsIOS(isIosDevice);
+
+    if (isIosDevice) {
+      // iOS doesn't support beforeinstallprompt, just show the banner directly
+      setShowInstallPrompt(true);
+    } else {
+      const handleBeforeInstallPrompt = (e: any) => {
+        e.preventDefault();
+        setDeferredPrompt(e);
+        setShowInstallPrompt(true);
+      };
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      
+      return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    }
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      }
+      setDeferredPrompt(null);
+      setShowInstallPrompt(false);
+    } else if (isIOS) {
+      alert("No Safari, toque em 'Compartilhar' (ícone quadrado com seta) e depois em 'Adicionar à Tela de Início'.");
+      handleDismissPrompt();
+    }
+  };
+
+  const handleDismissPrompt = () => {
+    localStorage.setItem("pwa_prompt_dismissed", "true");
+    setShowInstallPrompt(false);
+  };
+
   // 3. Splash Screen Premium enquanto obtém o primeiro GPS
   if (!userPos) {
     return (
@@ -164,6 +217,35 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col bg-white">
+      {/* PWA Install Banner */}
+      {showInstallPrompt && (
+        <div className="absolute top-0 inset-x-0 z-[6000] bg-white border-b border-gray-200 px-4 py-3 shadow-lg flex items-center justify-between pointer-events-auto">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-tr from-[#ff5a5f] to-yellow-400 rounded-xl flex items-center justify-center shrink-0">
+               <Download size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="font-bold text-gray-900 text-sm">Instale o Sunset App</p>
+              <p className="text-xs text-gray-500">Acesso rápido e offline</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handleDismissPrompt}
+              className="text-gray-400 p-2 active:scale-95 transition-transform"
+            >
+              <X size={18} />
+            </button>
+            <button 
+              onClick={handleInstallClick}
+              className="bg-[#ff5a5f] text-white text-xs font-bold px-4 py-2 rounded-full shadow-md active:scale-95 transition-transform"
+            >
+              Instalar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header Overlay (only visible on map) */}
       {!showCompass && (
         <header className="absolute top-0 w-full p-5 flex justify-between items-center z-[1000] bg-gradient-to-b from-white/90 to-transparent pointer-events-none">
