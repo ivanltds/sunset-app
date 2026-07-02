@@ -11,6 +11,7 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
   const [targetDate, setTargetDate] = useState<Date | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [sensorStatus, setSensorStatus] = useState<"idle" | "requesting" | "active" | "denied">("idle");
+  const [needleColor, setNeedleColor] = useState("rgb(255, 90, 95)");
 
   const startSensors = async () => {
     setSensorStatus("requesting");
@@ -74,10 +75,15 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
           setEventType(eType);
 
           const position = SunCalc.getPosition(tTime, lat, lng);
-          // Converter azimuth de radianos a partir do Sul para graus a partir do Norte com wrap seguro
-          let az = position.azimuth * 180 / Math.PI; // Graus a partir do sul
+          // Converter azimuth de radianos a partir do Sul para graus a partir do Norte
+          let az = position.azimuth * 180 / Math.PI; 
           let azimuthDeg = (az + 180) % 360;
           if (azimuthDeg < 0) azimuthDeg += 360;
+          
+          // O usuário relatou que a direção Leste/Oeste está invertida no dispositivo.
+          // Para corrigir esse espelhamento do giroscópio absoluto do Android ou do SunCalc, invertemos o eixo E/W:
+          azimuthDeg = (360 - azimuthDeg) % 360;
+          
           setTargetAzimuth(azimuthDeg);
         },
         (err) => console.warn(err),
@@ -115,6 +121,21 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
     lastHeading.current = smoothedHeading;
     setHeading(smoothedHeading);
   };
+
+  // Atualizar cor dinâmica baseada na proximidade
+  useEffect(() => {
+    // Diferença angular de 0 (alinhado) a 180 (oposto)
+    const diff = Math.abs(((heading - targetAzimuth + 540) % 360) - 180);
+    const ratio = diff / 180;
+    
+    // Quente (Alinhado): rgb(255, 90, 95) - Coral
+    // Frio (Oposto): rgb(59, 130, 246) - Azul
+    const r = Math.round(255 - ratio * (255 - 59));
+    const g = Math.round(90 - ratio * (90 - 130));
+    const b = Math.round(95 - ratio * (95 - 246));
+    
+    setNeedleColor(`rgb(${r}, ${g}, ${b})`);
+  }, [heading, targetAzimuth]);
 
   useEffect(() => {
     return () => {
@@ -170,27 +191,39 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
 
           {/* Compass World (Rotates via CSS based on real sensor) */}
           <div 
-            className="absolute w-full h-full top-0 left-0 transition-transform duration-75 ease-linear pointer-events-none"
-            style={{ transform: `rotate(${-heading}deg)` }}
+            className="absolute w-[300px] h-[300px] top-1/2 left-1/2 transition-transform duration-75 ease-linear pointer-events-none"
+            style={{ transform: `translate(-50%, -50%) rotate(${-heading}deg)` }}
           >
-            {/* Cardinal Indicators */}
-            <div className="absolute top-20 left-1/2 -translate-x-1/2 text-gray-400 font-bold text-lg">N</div>
-            <div className="absolute bottom-40 left-1/2 -translate-x-1/2 text-gray-400 font-bold text-lg">S</div>
-            <div className="absolute right-10 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">L</div>
-            <div className="absolute left-10 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">O</div>
-
-            {/* User Center */}
-            <div className="absolute w-6 h-6 border-4 border-white bg-[#ff5a5f] rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 shadow-[0_0_15px_3px_rgba(255,90,95,0.4)]"></div>
+            {/* Cardinal Indicators (Fixos na borda do círculo de 300px) */}
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 text-gray-400 font-bold text-lg">N</div>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-gray-400 font-bold text-lg">S</div>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">L</div>
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">O</div>
 
             {/* The needle pointing to the Target Azimuth in the rotated div */}
             <div 
               className="absolute w-full h-full top-0 left-0 transition-transform duration-500 ease-in-out"
               style={{ transform: `rotate(${targetAzimuth}deg)` }}
             >
-              <div className="absolute w-1 h-[140px] bg-gradient-to-t from-transparent to-[#ff5a5f] top-1/2 left-1/2 -translate-x-1/2 -translate-y-full"></div>
-              <div className="absolute w-4 h-4 bg-[#ff5a5f] rounded-full top-[15%] left-1/2 -translate-x-1/2 shadow-[0_0_15px_3px_rgba(255,90,95,0.4)]"></div>
+              {/* Haste da agulha com gradiente que respeita a cor */}
+              <div 
+                className="absolute w-1 h-[140px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-full transition-colors duration-200"
+                style={{ background: `linear-gradient(to top, transparent, ${needleColor})` }}
+              ></div>
+              
+              {/* Ponto na ponta da agulha */}
+              <div 
+                className="absolute w-5 h-5 rounded-full top-[12%] left-1/2 -translate-x-1/2 transition-colors duration-200"
+                style={{ 
+                  backgroundColor: needleColor, 
+                  boxShadow: `0 0 15px 3px ${needleColor}80` // 80 é hex pra 50% opacity aproximado
+                }}
+              ></div>
             </div>
           </div>
+          
+          {/* User Center (Fixo na tela, acima do mundo que gira) */}
+          <div className="absolute w-6 h-6 border-4 border-white bg-gray-900 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 shadow-md"></div>
 
           {/* Info */}
           <div className="absolute bottom-28 text-center w-full px-6 z-20">
