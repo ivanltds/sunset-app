@@ -56,18 +56,14 @@ export default function FeedView({
   const fetchIdRef = useRef(0);
 
   const fetchPhotos = async () => {
-    // 1. Incrementar ID da chamada ativa
-    fetchIdRef.current += 1;
-    const currentFetchId = fetchIdRef.current;
-
-    // 2. Verificar se a lista de spots está vazia
+    // 1. Verificar se a lista de spots está vazia
     if (!spots.length) {
       setPhotos([]);
       setLoading(false);
       return;
     }
 
-    // 3. Criar string de comparação de IDs para evitar requisições de rede redundantes
+    // 2. Criar string de comparação de IDs para evitar requisições de rede redundantes
     const currentIds = spots.map(s => s.id).sort().join(",");
     if (currentIds === prevSpotIds) {
       // Se os IDs não mudaram, apenas recalculamos a ordenação se a localização do usuário mudou
@@ -83,6 +79,10 @@ export default function FeedView({
       }
       return;
     }
+
+    // A partir daqui, faremos um fetch de rede, então incrementamos o ID de controle
+    fetchIdRef.current += 1;
+    const currentFetchId = fetchIdRef.current;
 
     setPrevSpotIds(currentIds);
     setLoading(true);

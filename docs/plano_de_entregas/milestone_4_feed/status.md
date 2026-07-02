@@ -21,3 +21,11 @@
 - [x] Fetch dos likes e bookmarks via Supabase na inicialização.
 - [x] Toggle Function Otimista (Like/Unlike e Bookmark/Unbookmark).
 - [x] Sincronização: Bookmark altera a cor do marcador (Marker) do Leaflet no `MapEngine`.
+
+### 5. Refinamentos e Correções Pós-MVP
+- [x] Seed do MVP Inicial: script executado com migration gerando 90 lugares turísticos base no banco (SP, RJ).
+- [x] Correção de "Map Hijacking": mapa não centraliza mais à força com base no watcher do GPS durante exploração manual do mapa.
+- [x] Filtragem Dinâmica: feed exibe apenas spots próximos e responde ao item selecionado.
+- [x] Resolução de Crashes no Mapa (React-Leaflet): remoção de popups nativos incompatíveis com state updates síncronos, debounce de eventos Leaflet e memoização estrita da renderização dos marcadores SVG.
+- [x] Correção de Infinite Loading no Feed: resolução da race condition de `fetchIdRef` em chamadas canceladas por otimização do useEffect.
+- [x] UX Polish: Troca do ícone da Camera pelo `MapPinPlus` no botão Novo Spot.
