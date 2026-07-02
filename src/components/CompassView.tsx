@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Sunrise } from "lucide-react";
+import { X, Sunrise, Sunset } from "lucide-react";
 import * as SunCalc from "suncalc";
 
 export default function CompassView({ onClose }: { onClose: () => void }) {
   const [heading, setHeading] = useState(0);
   const [targetAzimuth, setTargetAzimuth] = useState(0);
+  const [eventType, setEventType] = useState<"sunrise" | "sunset">("sunrise");
+  const [targetDate, setTargetDate] = useState<Date | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [sensorStatus, setSensorStatus] = useState<"idle" | "requesting" | "active" | "denied">("idle");
 
   const startSensors = async () => {
@@ -43,15 +46,32 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
           const lng = pos.coords.longitude;
           
           const now = new Date();
-          let targetTime = SunCalc.getTimes(now, lat, lng).sunrise;
+          const times = SunCalc.getTimes(now, lat, lng);
           
-          if (now.getTime() > targetTime.getTime()) {
-            // Se já passou do nascer do sol hoje, calcula para amanhã
-            const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-            targetTime = SunCalc.getTimes(tomorrow, lat, lng).sunrise;
+          let tTime: Date;
+          let eType: "sunrise" | "sunset";
+          
+          if (now > times.sunrise && now < times.sunset) {
+            // De dia: focar no Pôr do Sol
+            tTime = times.sunset;
+            eType = "sunset";
+          } else {
+            // De noite/madrugada: focar no Nascer do Sol
+            eType = "sunrise";
+            if (now > times.sunset) {
+              // Se já passou do por do sol hoje, nascer do sol de amanhã
+              const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+              tTime = SunCalc.getTimes(tomorrow, lat, lng).sunrise;
+            } else {
+              // Se for madrugada, nascer do sol de hoje
+              tTime = times.sunrise;
+            }
           }
           
-          const position = SunCalc.getPosition(targetTime, lat, lng);
+          setTargetDate(tTime);
+          setEventType(eType);
+
+          const position = SunCalc.getPosition(tTime, lat, lng);
           // Converter azimuth de radianos a partir do Sul para graus a partir do Norte
           const azimuthDeg = (position.azimuth * 180 / Math.PI) + 180;
           setTargetAzimuth(azimuthDeg);
@@ -100,13 +120,32 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!targetDate) return;
+    const updateCountdown = () => {
+      const diff = targetDate.getTime() - new Date().getTime();
+      if (diff <= 0) {
+        setTimeRemaining("Agora!");
+        return;
+      }
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const secs = Math.floor((diff % (1000 * 60)) / 1000);
+      setTimeRemaining(`${hours}h ${mins}m ${secs}s`);
+    };
+
+    updateCountdown(); // Call immediately
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
   return (
     <div className="flex-1 w-full bg-white flex flex-col items-center justify-center relative overflow-hidden text-gray-900 z-10">
       
       {sensorStatus !== "active" ? (
         <div className="z-30 text-center px-6">
-          <h2 className="text-2xl font-bold mb-4">Ativar Bússola</h2>
-          <p className="text-gray-500 mb-8">Precisamos acessar sua bússola e GPS para te guiar até onde o Sol vai nascer.</p>
+          <h2 className="text-2xl font-bold mb-4">Ativar Bússola Solar</h2>
+          <p className="text-gray-500 mb-8">Precisamos acessar sua bússola e GPS para te guiar até onde o Sol vai nascer ou se pôr.</p>
           <button 
             onClick={startSensors}
             className="bg-[#ff5a5f] text-white py-4 px-8 rounded-full font-bold text-lg shadow-[0_10px_15px_-3px_rgba(255,90,95,0.4)] active:scale-95 transition-transform"
@@ -121,9 +160,9 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
           <div className="absolute w-[150px] h-[150px] rounded-full border-2 border-dashed border-gray-400 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-70"></div>
           
           {/* Target Indicator */}
-          <div className="absolute top-20 text-[#ff5a5f] font-bold text-xl flex flex-col items-center z-20">
-            <Sunrise size={32} className="mb-2" />
-            <span>Nascer do Sol</span>
+          <div className="absolute top-16 text-[#ff5a5f] font-bold text-xl flex flex-col items-center z-20">
+            {eventType === "sunrise" ? <Sunrise size={32} className="mb-2" /> : <Sunset size={32} className="mb-2" />}
+            <span>{eventType === "sunrise" ? "Nascer do Sol" : "Pôr do Sol"}</span>
           </div>
 
           {/* User Center */}
@@ -145,9 +184,10 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Info */}
-          <div className="absolute bottom-32 text-center w-full px-6 z-20">
-            <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Siga o Sol</h2>
-            <p className="text-gray-500">Gire o celular até alinhar o ponto laranja com o Nascer do Sol.</p>
+          <div className="absolute bottom-28 text-center w-full px-6 z-20">
+            <h2 className="text-4xl font-extrabold text-gray-900 mb-1">{timeRemaining || "..."}</h2>
+            <p className="text-[#ff5a5f] font-bold mb-4 uppercase tracking-widest text-sm">Tempo Restante</p>
+            <p className="text-gray-500 text-sm">Gire o celular até alinhar o ponto laranja com o {eventType === "sunrise" ? "Nascer" : "Pôr"} do Sol.</p>
           </div>
         </>
       )}
