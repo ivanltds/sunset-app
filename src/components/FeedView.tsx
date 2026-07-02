@@ -186,29 +186,30 @@ export default function FeedView({
   };
 
   return (
-    <motion.div 
-      drag="y"
-      dragConstraints={{ top: yStops.full, bottom: yStops.collapsed }}
-      dragElastic={0.1}
-      onDragEnd={(e, info) => {
-        const velY = info.velocity.y;
-        const offsetY = info.offset.y;
-        
-        // Simples lógica de snap baseada em velocidade e direção
-        if (feedState === "full") {
-          if (velY > 200 || offsetY > 100) setFeedState("half");
-        } else if (feedState === "half") {
-          if (velY > 200 || offsetY > 100) setFeedState("collapsed");
-          else if (velY < -200 || offsetY < -100) setFeedState("full");
-        } else if (feedState === "collapsed") {
-          if (velY < -200 || offsetY < -100) setFeedState("half");
-        }
-      }}
-      animate={{ y: yStops[feedState] }}
-      transition={{ type: "spring", damping: 25, stiffness: 200 }}
-      className="absolute inset-x-0 bottom-0 top-[10%] bg-white rounded-t-3xl shadow-[0_-20px_40px_rgba(0,0,0,0.15)] z-[2000] flex flex-col"
-      style={{ touchAction: "none" }} // Necessário para o framer-motion drag no mobile
-    >
+    <>
+      <motion.div 
+        drag="y"
+        dragConstraints={{ top: yStops.full, bottom: yStops.collapsed }}
+        dragElastic={0.1}
+        onDragEnd={(e, info) => {
+          const velY = info.velocity.y;
+          const offsetY = info.offset.y;
+          
+          // Simples lógica de snap baseada em velocidade e direção
+          if (feedState === "full") {
+            if (velY > 200 || offsetY > 100) setFeedState("half");
+          } else if (feedState === "half") {
+            if (velY > 200 || offsetY > 100) setFeedState("collapsed");
+            else if (velY < -200 || offsetY < -100) setFeedState("full");
+          } else if (feedState === "collapsed") {
+            if (velY < -200 || offsetY < -100) setFeedState("half");
+          }
+        }}
+        animate={{ y: yStops[feedState] }}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        className="absolute inset-x-0 bottom-0 top-[10%] bg-white rounded-t-3xl shadow-[0_-20px_40px_rgba(0,0,0,0.15)] z-[2000] flex flex-col"
+        style={{ touchAction: "none" }} // Necessário para o framer-motion drag no mobile
+      >
       {/* Handlebar */}
       <div 
         className="w-full flex flex-col items-center pt-4 pb-2 shrink-0 cursor-grab active:cursor-grabbing"
@@ -289,7 +290,7 @@ export default function FeedView({
             ))}
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* FAB para adicionar nova foto no feed */}
       <div className={`fixed bottom-6 right-6 z-[2500] transition-all duration-300 ${feedState === "collapsed" ? "opacity-0 pointer-events-none translate-y-10" : "opacity-100 translate-y-0"}`}>
@@ -436,7 +437,6 @@ export default function FeedView({
           document.body
         )}
       </AnimatePresence>
-      
-    </motion.div>
+    </>
   );
 }

@@ -264,7 +264,7 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
 
           <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${hideCompass ? 'opacity-0' : 'opacity-100'}`}>
             {/* Toggle Alternative Event Button */}
-            <div className="absolute top-6 right-4 z-40 max-w-[130px] flex justify-end">
+            <div className="absolute top-20 right-4 z-40 max-w-[130px] flex justify-end">
               <button
                 onClick={() => {
                   setShowAlternativeEvent(!showAlternativeEvent);
