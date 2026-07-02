@@ -12,6 +12,7 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [sensorStatus, setSensorStatus] = useState<"idle" | "requesting" | "active" | "denied">("idle");
   const [needleColor, setNeedleColor] = useState("rgb(255, 90, 95)");
+  const [hasDiscovered, setHasDiscovered] = useState(false);
 
   const startSensors = async () => {
     setSensorStatus("requesting");
@@ -135,7 +136,12 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
     const b = Math.round(95 - ratio * (95 - 246));
     
     setNeedleColor(`rgb(${r}, ${g}, ${b})`);
-  }, [heading, targetAzimuth]);
+
+    // Disparar o "Aha Moment" se a mira ficar muito próxima (menos de 8 graus)
+    if (diff < 8 && !hasDiscovered) {
+      setHasDiscovered(true);
+    }
+  }, [heading, targetAzimuth, hasDiscovered]);
 
   useEffect(() => {
     return () => {
@@ -164,7 +170,18 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
   }, [targetDate]);
 
   return (
-    <div className="flex-1 w-full bg-white flex flex-col items-center justify-center relative overflow-hidden text-gray-900 z-10">
+    <div className={`flex-1 w-full flex flex-col items-center justify-center relative overflow-hidden transition-colors duration-1000 z-10 ${hasDiscovered ? 'bg-transparent' : 'bg-white'}`}>
+      
+      {/* Twilight Animation Overlay */}
+      <div 
+        className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-[2000ms] ease-in-out ${hasDiscovered ? 'opacity-100' : 'opacity-0'}`}
+        style={{
+          background: 'linear-gradient(to top, #ff9a44, #fc6076, #3b82f6)'
+        }}
+      >
+         {/* Animated Sun Glow */}
+         <div className={`absolute left-1/2 -translate-x-1/2 w-48 h-48 bg-[#ffdd55] rounded-full blur-[60px] opacity-80 transition-all duration-[3000ms] ${hasDiscovered ? 'bottom-20 scale-150' : '-bottom-20 scale-50'}`}></div>
+      </div>
       
       {sensorStatus !== "active" ? (
         <div className="z-30 text-center px-6">
@@ -184,9 +201,17 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
           <div className="absolute w-[150px] h-[150px] rounded-full border-2 border-dashed border-gray-400 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-70"></div>
           
           {/* Target Indicator */}
-          <div className="absolute top-16 text-[#ff5a5f] font-bold text-xl flex flex-col items-center z-20">
+          <div className={`absolute top-16 font-bold text-xl flex flex-col items-center z-20 transition-colors duration-1000 ${hasDiscovered ? 'text-white' : 'text-[#ff5a5f]'}`}>
             {eventType === "sunrise" ? <Sunrise size={32} className="mb-2" /> : <Sunset size={32} className="mb-2" />}
             <span>{eventType === "sunrise" ? "Nascer do Sol" : "Pôr do Sol"}</span>
+          </div>
+
+          {/* Success Message Overlay */}
+          <div className={`absolute top-[22%] w-full px-6 z-30 transition-all duration-1000 delay-500 pointer-events-none ${hasDiscovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+            <div className="bg-white/20 backdrop-blur-md border border-white/40 p-4 rounded-2xl text-center shadow-2xl">
+              <p className="text-white text-2xl font-extrabold mb-1">🎉 Perfeito!</p>
+              <p className="text-white/90 font-medium leading-tight">É pra lá que c deve apontar sua câmera!</p>
+            </div>
           </div>
 
           {/* Compass World (Rotates via CSS based on real sensor) */}
@@ -195,10 +220,10 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
             style={{ transform: `translate(-50%, -50%) rotate(${-heading}deg)` }}
           >
             {/* Cardinal Indicators (Fixos na borda do círculo de 300px) */}
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 text-gray-400 font-bold text-lg">N</div>
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-gray-400 font-bold text-lg">S</div>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">L</div>
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">O</div>
+            <div className={`absolute top-2 left-1/2 -translate-x-1/2 font-bold text-lg transition-colors duration-1000 ${hasDiscovered ? 'text-white/80' : 'text-gray-400'}`}>N</div>
+            <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 font-bold text-lg transition-colors duration-1000 ${hasDiscovered ? 'text-white/80' : 'text-gray-400'}`}>S</div>
+            <div className={`absolute right-4 top-1/2 -translate-y-1/2 font-bold text-lg transition-colors duration-1000 ${hasDiscovered ? 'text-white/80' : 'text-gray-400'}`}>L</div>
+            <div className={`absolute left-4 top-1/2 -translate-y-1/2 font-bold text-lg transition-colors duration-1000 ${hasDiscovered ? 'text-white/80' : 'text-gray-400'}`}>O</div>
 
             {/* The needle pointing to the Target Azimuth in the rotated div */}
             <div 
@@ -223,13 +248,19 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
           </div>
           
           {/* User Center (Fixo na tela, acima do mundo que gira) */}
-          <div className="absolute w-6 h-6 border-4 border-white bg-gray-900 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 shadow-md"></div>
+          <div className={`absolute w-6 h-6 border-4 border-white rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 shadow-md transition-colors duration-1000 ${hasDiscovered ? 'bg-white' : 'bg-gray-900'}`}></div>
 
           {/* Info */}
-          <div className="absolute bottom-28 text-center w-full px-6 z-20">
-            <h2 className="text-4xl font-extrabold text-gray-900 mb-1">{timeRemaining || "..."}</h2>
-            <p className="text-[#ff5a5f] font-bold mb-4 uppercase tracking-widest text-sm">Tempo Restante</p>
-            <p className="text-gray-500 text-sm">Gire o celular até alinhar o ponto laranja com o {eventType === "sunrise" ? "Nascer" : "Pôr"} do Sol.</p>
+          <div className="absolute bottom-24 text-center w-full px-6 z-20">
+            <h2 className={`text-6xl font-extrabold mb-1 tracking-tight transition-colors duration-1000 ${hasDiscovered ? 'text-white' : 'text-gray-900'}`}>
+              {targetDate ? targetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "..."}
+            </h2>
+            <p className={`font-bold mb-4 uppercase tracking-widest text-sm transition-colors duration-1000 ${hasDiscovered ? 'text-white/90' : 'text-[#ff5a5f]'}`}>
+              {timeRemaining ? `Faltam ${timeRemaining.replace("h ", "h").replace("m ", "m").replace("s", "s")}` : "Calculando..."}
+            </p>
+            <p className={`text-sm max-w-[260px] mx-auto transition-colors duration-1000 ${hasDiscovered ? 'text-white/80' : 'text-gray-500'}`}>
+              Gire o celular até alinhar o ponto laranja com o {eventType === "sunrise" ? "Nascer" : "Pôr"} do Sol.
+            </p>
           </div>
         </>
       )}
