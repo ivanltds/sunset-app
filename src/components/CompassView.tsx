@@ -48,6 +48,8 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
           const now = new Date();
           const times = SunCalc.getTimes(now, lat, lng);
           
+          if (!times.sunrise || !times.sunset) return; // Segurança para latitudes extremas (pólos) onde o sol não nasce/põe
+
           let tTime: Date;
           let eType: "sunrise" | "sunset";
           
@@ -61,7 +63,7 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
             if (now > times.sunset) {
               // Se já passou do por do sol hoje, nascer do sol de amanhã
               const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-              tTime = SunCalc.getTimes(tomorrow, lat, lng).sunrise;
+              tTime = SunCalc.getTimes(tomorrow, lat, lng).sunrise || tomorrow;
             } else {
               // Se for madrugada, nascer do sol de hoje
               tTime = times.sunrise;
