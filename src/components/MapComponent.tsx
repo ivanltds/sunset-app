@@ -52,7 +52,7 @@ const savedSpotIcon = new L.DivIcon({
   popupAnchor: [0, -24],
 });
 
-import { LocateFixed, MapPinPlus, Compass } from "lucide-react";
+import { LocateFixed, MapPinPlus, Sunrise } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import FeedView from "./FeedView";
 
@@ -119,6 +119,14 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
   const [feedState, setFeedState] = useState<"full" | "half" | "collapsed">("half");
   const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null);
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
+  const [showCompassTutorial, setShowCompassTutorial] = useState(false);
+
+  useEffect(() => {
+    const hasSeenCompass = localStorage.getItem("hasSeenCompassTutorial");
+    if (!hasSeenCompass) {
+      setShowCompassTutorial(true);
+    }
+  }, []);
 
   // Filtrar spots visíveis na viewport do mapa (memorizado)
   const visibleSpots = useMemo(() => {
@@ -282,15 +290,27 @@ export default function MapComponent({ userPos, onOpenCreator, onOpenCompass }: 
           <MapPinPlus size={22} /> Novo Spot
         </button>
 
-        <button 
-          className="w-12 h-12 bg-gray-900 text-white rounded-full flex items-center justify-center shadow-lg border border-gray-800 pointer-events-auto active:bg-gray-800 active:scale-95 transition-all"
-          onClick={() => {
-            if (onOpenCompass && feedState === "collapsed") onOpenCompass();
-          }}
-          disabled={feedState !== "collapsed"}
-        >
-          <Compass size={22} />
-        </button>
+        <div className="relative pointer-events-auto flex-shrink-0">
+          {showCompassTutorial && feedState === "collapsed" && (
+            <div className="absolute bottom-full mb-3 right-0 w-48 bg-gray-900 text-white text-xs p-3 rounded-xl shadow-2xl animate-bounce after:content-[''] after:absolute after:top-full after:right-4 after:border-8 after:border-transparent after:border-t-gray-900">
+              <span className="font-bold block mb-1">Novo: Bússola Solar 🌅</span>
+              Descubra exatamante onde o sol vai nascer!
+            </div>
+          )}
+          <button 
+            className="w-12 h-12 bg-gray-900 text-[#ff5a5f] rounded-full flex items-center justify-center shadow-lg border border-gray-800 active:bg-gray-800 active:scale-95 transition-all"
+            onClick={() => {
+              if (showCompassTutorial) {
+                setShowCompassTutorial(false);
+                localStorage.setItem("hasSeenCompassTutorial", "true");
+              }
+              if (onOpenCompass && feedState === "collapsed") onOpenCompass();
+            }}
+            disabled={feedState !== "collapsed"}
+          >
+            <Sunrise size={22} />
+          </button>
+        </div>
       </div>
 
       {/* Feed Bottom Sheet */}
