@@ -290,6 +290,7 @@ export default function FeedView({
             ))}
           </div>
         )}
+      </div>
       </motion.div>
 
       {/* FAB para adicionar nova foto no feed */}
