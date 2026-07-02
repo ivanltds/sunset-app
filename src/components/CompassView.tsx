@@ -111,7 +111,8 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
     
     // O usuário relatou que a direção Leste/Oeste está invertida no dispositivo.
     // Para corrigir esse espelhamento do giroscópio absoluto do Android ou do SunCalc, invertemos o eixo E/W:
-    azimuthDeg = (360 - azimuthDeg) % 360;
+    // ARREDONDAMENTO PARA EVITAR TREMOR DA AGULHA:
+    azimuthDeg = Math.round((360 - azimuthDeg) % 360);
     
     setTargetAzimuth(azimuthDeg);
   }, [userLocation, showAlternativeEvent]);
@@ -189,8 +190,8 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
           
         }, 1500); // Exige manter a mira cravada por 1.5 segundos
       }
-    } else {
-      // Se tremer ou sair da mira antes do tempo, cancela
+    } else if (diff > 15 || sensorStatus !== "active") {
+      // HISTERESE: Se tremer para fora da zona de tolerância (>15 graus), cancela
       if (alignmentTimer.current && discoveryPhase === "idle") {
         clearTimeout(alignmentTimer.current);
         alignmentTimer.current = null;
