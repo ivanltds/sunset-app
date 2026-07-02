@@ -14,6 +14,8 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
   const [needleColor, setNeedleColor] = useState("rgb(255, 90, 95)");
   const [discoveryPhase, setDiscoveryPhase] = useState<"idle" | "twilight" | "message" | "done">("idle");
   const [twilightOpacity, setTwilightOpacity] = useState(0);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [showAlternativeEvent, setShowAlternativeEvent] = useState(false);
   const alignmentTimer = useRef<NodeJS.Timeout | null>(null);
 
   const startSensors = async () => {
@@ -46,54 +48,73 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(
         (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          
-          const now = new Date();
-          const times = SunCalc.getTimes(now, lat, lng);
-          
-          if (!times.sunrise || !times.sunset) return; // Segurança para latitudes extremas (pólos) onde o sol não nasce/põe
-
-          let tTime: Date;
-          let eType: "sunrise" | "sunset";
-          
-          if (now > times.sunrise && now < times.sunset) {
-            // De dia: focar no Pôr do Sol
-            tTime = times.sunset;
-            eType = "sunset";
-          } else {
-            // De noite/madrugada: focar no Nascer do Sol
-            eType = "sunrise";
-            if (now > times.sunset) {
-              // Se já passou do por do sol hoje, nascer do sol de amanhã
-              const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-              tTime = SunCalc.getTimes(tomorrow, lat, lng).sunrise || tomorrow;
-            } else {
-              // Se for madrugada, nascer do sol de hoje
-              tTime = times.sunrise;
-            }
-          }
-          
-          setTargetDate(tTime);
-          setEventType(eType);
-
-          const position = SunCalc.getPosition(tTime, lat, lng);
-          // Converter azimuth de radianos a partir do Sul para graus a partir do Norte
-          let az = position.azimuth * 180 / Math.PI; 
-          let azimuthDeg = (az + 180) % 360;
-          if (azimuthDeg < 0) azimuthDeg += 360;
-          
-          // O usuário relatou que a direção Leste/Oeste está invertida no dispositivo.
-          // Para corrigir esse espelhamento do giroscópio absoluto do Android ou do SunCalc, invertemos o eixo E/W:
-          azimuthDeg = (360 - azimuthDeg) % 360;
-          
-          setTargetAzimuth(azimuthDeg);
+          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         },
         (err) => console.warn(err),
         { enableHighAccuracy: true }
       );
     }
   };
+
+  useEffect(() => {
+    if (!userLocation) return;
+    const { lat, lng } = userLocation;
+    const now = new Date();
+    const times = SunCalc.getTimes(now, lat, lng);
+    
+    if (!times.sunrise || !times.sunset) return; // Segurança para latitudes extremas
+
+    let defaultTime: Date;
+    let defaultType: "sunrise" | "sunset";
+    let altTime: Date;
+    let altType: "sunrise" | "sunset";
+    
+    if (now > times.sunrise && now < times.sunset) {
+      // De dia: default é Pôr do Sol
+      defaultTime = times.sunset;
+      defaultType = "sunset";
+      // Alt é Nascer do Sol de amanhã
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      altTime = SunCalc.getTimes(tomorrow, lat, lng).sunrise || tomorrow;
+      altType = "sunrise";
+    } else {
+      // De noite/madrugada: default é Nascer do Sol
+      defaultType = "sunrise";
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      
+      if (now > times.sunset) {
+        // Já passou do por do sol hoje, nascer de amanhã
+        defaultTime = SunCalc.getTimes(tomorrow, lat, lng).sunrise || tomorrow;
+        // Alt é Pôr do Sol de amanhã
+        altTime = SunCalc.getTimes(tomorrow, lat, lng).sunset || tomorrow;
+        altType = "sunset";
+      } else {
+        // Madrugada, nascer de hoje
+        defaultTime = times.sunrise;
+        // Alt é Pôr do Sol de hoje
+        altTime = times.sunset;
+        altType = "sunset";
+      }
+    }
+    
+    const activeTime = showAlternativeEvent ? altTime : defaultTime;
+    const activeType = showAlternativeEvent ? altType : defaultType;
+
+    setTargetDate(activeTime);
+    setEventType(activeType);
+
+    const position = SunCalc.getPosition(activeTime, lat, lng);
+    // Converter azimuth de radianos a partir do Sul para graus a partir do Norte
+    let az = position.azimuth * 180 / Math.PI; 
+    let azimuthDeg = (az + 180) % 360;
+    if (azimuthDeg < 0) azimuthDeg += 360;
+    
+    // O usuário relatou que a direção Leste/Oeste está invertida no dispositivo.
+    // Para corrigir esse espelhamento do giroscópio absoluto do Android ou do SunCalc, invertemos o eixo E/W:
+    azimuthDeg = (360 - azimuthDeg) % 360;
+    
+    setTargetAzimuth(azimuthDeg);
+  }, [userLocation, showAlternativeEvent]);
 
   const lastHeading = useRef(0);
 
@@ -241,6 +262,20 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${hideCompass ? 'opacity-0' : 'opacity-100'}`}>
+            {/* Toggle Alternative Event Button */}
+            <div className="absolute top-6 right-6 z-40">
+              <button
+                onClick={() => {
+                  setShowAlternativeEvent(!showAlternativeEvent);
+                  setDiscoveryPhase("idle");
+                  setTwilightOpacity(0);
+                }}
+                className={`px-4 py-2 rounded-full font-bold text-sm shadow-md transition-colors duration-300 ${isDarkTheme ? 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                Próximo {eventType === "sunrise" ? "Pôr" : "Nascer"} do Sol
+              </button>
+            </div>
+
             {/* Decorative Radars */}
             <div className="absolute w-[300px] h-[300px] rounded-full border-2 border-dashed border-gray-300 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-70"></div>
             <div className="absolute w-[150px] h-[150px] rounded-full border-2 border-dashed border-gray-400 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-70"></div>
