@@ -289,7 +289,7 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
 
             {/* Compass World (Rotates via CSS based on real sensor) */}
             <div 
-              className="absolute w-[300px] h-[300px] top-1/2 left-1/2 transition-transform duration-75 ease-linear pointer-events-none"
+              className="absolute w-[300px] h-[300px] top-1/2 left-1/2 pointer-events-none"
               style={{ transform: `translate(-50%, -50%) rotate(${-heading}deg)` }}
             >
               {/* Cardinal Indicators (Fixos na borda do círculo de 300px) */}
@@ -300,7 +300,7 @@ export default function CompassView({ onClose }: { onClose: () => void }) {
 
               {/* The needle pointing to the Target Azimuth in the rotated div */}
               <div 
-                className="absolute w-full h-full top-0 left-0 transition-transform duration-500 ease-in-out"
+                className="absolute w-full h-full top-0 left-0"
                 style={{ transform: `rotate(${targetAzimuth}deg)` }}
               >
                 {/* Haste da agulha com gradiente que respeita a cor */}
